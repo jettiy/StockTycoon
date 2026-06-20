@@ -184,8 +184,11 @@ func _emit_net_worth() -> void:
 
 # ─── 경과 / 직급 ────────────────────────────────
 
-func advance_day() -> void:
+signal salary_paid(amount: float)
+
+func advance_day() -> Dictionary:
 	player["day"] += 1
+	var result := {"day": player["day"], "salary": 0.0, "rank_up": ""}
 
 	# 월급 지급 (7일마다)
 	var salary_days: int = _balance.get("career", {}).get("salary_interval_days", 7)
@@ -194,10 +197,25 @@ func advance_day() -> void:
 		if ranks.size() > player["rank_index"]:
 			var salary: float = ranks[player["rank_index"]]["salary"]
 			player["cash"] += salary
+			result["salary"] = salary
 			cash_changed.emit(player["cash"])
+			salary_paid.emit(salary)
 
+	var old_rank: int = player["rank_index"]
 	_check_rank_up()
+	if player["rank_index"] > old_rank:
+		result["rank_up"] = get_rank_name()
+
+	# 파산 방지 지원금
+	var bailout_thresh: float = _balance.get("difficulty", {}).get("bailout_threshold", 500000)
+	var bailout_amt: float = _balance.get("difficulty", {}).get("bailout_amount", 2000000)
+	if get_net_worth() < bailout_thresh:
+		player["cash"] += bailout_amt
+		result["bailout"] = bailout_amt
+		cash_changed.emit(player["cash"])
+
 	day_advanced.emit(player["day"])
+	return result
 
 
 func _check_rank_up() -> void:
@@ -219,6 +237,75 @@ func get_rank_name() -> String:
 	if ranks.size() > player["rank_index"]:
 		return ranks[player["rank_index"]]["rank"]
 	return "신입사원"
+
+
+# ─── 라이프 시스템 (주거/차량) ────────────────────
+
+func get_housing_list() -> Array:
+	return _balance.get("housing", [])
+
+func get_vehicle_list() -> Array:
+	return _balance.get("vehicles", [])
+
+func get_current_house() -> Dictionary:
+	for h in get_housing_list():
+		if h["id"] == player["house"]:
+			return h
+	return {}
+
+func get_current_vehicle() -> Dictionary:
+	for v in get_vehicle_list():
+		if v["id"] == player["vehicle"]:
+			return v
+	return {}
+
+func buy_house(house_id: String) -> Dictionary:
+	var house: Dictionary = {}
+	for h in get_housing_list():
+		if h["id"] == house_id:
+			house = h
+			break
+	if house.is_empty():
+		return _fail("존재하지 않는 주거")
+
+	var current := get_current_house()
+	var current_idx := get_housing_list().find(current)
+	var new_idx := get_housing_list().find(house)
+	if new_idx <= current_idx:
+		return _fail("같거나 낮은 등급입니다")
+
+	var price: float = house["price"]
+	if player["cash"] < price:
+		return _fail("잔액 부족")
+
+	player["cash"] -= price
+	player["house"] = house_id
+	cash_changed.emit(player["cash"])
+	return {"success": true, "house": house}
+
+func buy_vehicle(vehicle_id: String) -> Dictionary:
+	var vehicle: Dictionary = {}
+	for v in get_vehicle_list():
+		if v["id"] == vehicle_id:
+			vehicle = v
+			break
+	if vehicle.is_empty():
+		return _fail("존재하지 않는 차량")
+
+	var current := get_current_vehicle()
+	var current_idx := get_vehicle_list().find(current)
+	var new_idx := get_vehicle_list().find(vehicle)
+	if new_idx <= current_idx:
+		return _fail("같거나 낮은 등급입니다")
+
+	var price: float = vehicle["price"]
+	if player["cash"] < price:
+		return _fail("잔액 부족")
+
+	player["cash"] -= price
+	player["vehicle"] = vehicle_id
+	cash_changed.emit(player["cash"])
+	return {"success": true, "vehicle": vehicle}
 
 
 # ─── 유틸 ──────────────────────────────────────

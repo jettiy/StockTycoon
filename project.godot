@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 GameManager="*res://scripts/autoload/GameManager.gd"
 MarketSim="*res://scripts/autoload/MarketSim.gd"
 SaveManager="*res://scripts/autoload/SaveManager.gd"
+AutoTradeManager="*res://scripts/autoload/AutoTradeManager.gd"
 
 [display]
 
