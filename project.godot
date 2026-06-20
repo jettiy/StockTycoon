@@ -21,6 +21,7 @@ AutoTradeManager="*res://scripts/autoload/AutoTradeManager.gd"
 EventManager="*res://scripts/autoload/EventManager.gd"
 NPCManager="*res://scripts/autoload/NPCManager.gd"
 AudioManager="*res://scripts/autoload/AudioManager.gd"
+PassiveIncomeManager="*res://scripts/autoload/PassiveIncomeManager.gd"
 
 [display]
 

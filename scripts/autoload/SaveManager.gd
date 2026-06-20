@@ -18,6 +18,11 @@ func save_game() -> bool:
 		"autotrade": AutoTradeManager.slots,
 		"npc": NPCManager.serialize(),
 		"events": {"active": EventManager.get_active_events()},
+		"passive_stats": {
+			"dividends": PassiveIncomeManager.get_total_dividends(),
+			"rental": PassiveIncomeManager.get_total_rental(),
+			"interest": PassiveIncomeManager.get_total_interest(),
+		},
 		"timestamp": Time.get_unix_time_from_system(),
 	}
 

@@ -23,6 +23,7 @@ const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
 @onready var _cash_label: Label = %CashLabel
 @onready var _networth_label: Label = %NetWorthLabel
 @onready var _day_label: Label = %DayLabel
+@onready var _passive_label: Label = %PassiveLabel
 @onready var _advance_btn: Button = %AdvanceButton
 @onready var _view_tabs: HBoxContainer = %ViewTabs
 @onready var _cat_tabs: HBoxContainer = %CatTabs
@@ -737,6 +738,8 @@ func _on_advance_day() -> void:
 		UIAnim.pop_in(_rank_label)
 	if r.has("bailout"):
 		msg += " | 파산방지 +%s" % _fmt_won(r["bailout"])
+	if r.get("dividends", 0.0) > 0:
+		msg += " | 배당금 +%s" % _fmt_won(r["dividends"])
 	_day_label.text = "%d일차" % r["day"]
 	_show_toast(msg)
 
@@ -903,6 +906,16 @@ func _on_market_tick() -> void:
 
 	if _networth_label:
 		_networth_label.text = _fmt_won(GameManager.get_net_worth())
+
+	# 자동 수익/초 표시
+	if _passive_label:
+		var pps := PassiveIncomeManager.get_projected_per_second()
+		if pps > 0:
+			_passive_label.text = "+" + _fmt_won_short(pps) + "/초"
+			_passive_label.add_theme_color_override("font_color", COL_GOLD)
+		else:
+			_passive_label.text = "0원/초"
+			_passive_label.add_theme_color_override("font_color", COL_TEXT_DIM)
 
 	if _trade_panel.visible:
 		_update_trade_panel()
@@ -1373,6 +1386,15 @@ func _fmt_won(a: float) -> String:
 	elif ab >= 10_000_000:
 		return "%.1f천만원" % (a / 10_000_000)
 	return "%.0f" % a + "원"
+
+
+func _fmt_won_short(a: float) -> String:
+	var ab := absf(a)
+	if ab >= 1_000_000:
+		return "%.1fM" % (a / 1_000_000)
+	elif ab >= 1_000:
+		return "%.1fK" % (a / 1_000)
+	return "%.0f" % a
 
 
 func _fmt_change(p: float) -> String:

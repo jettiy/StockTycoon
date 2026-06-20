@@ -59,6 +59,8 @@ func _load_stock_data() -> void:
 			"trend": float(s["trend"]),
 			"day_open": float(s["price"]),
 			"change_pct": 0.0,
+			"dividend_yield": float(s.get("dividend_yield", 0.0)),
+			"dividend_period": int(s.get("dividend_period", 7)),
 			"history": [],
 		}
 		stock["history"].append(stock["price"])

@@ -211,6 +211,11 @@ func advance_day() -> Dictionary:
 	var regen := get_energy_regen_rate()
 	recover_energy(regen)
 
+	# 정기 배당금 지급
+	var dividends := PassiveIncomeManager.pay_daily_dividends()
+	if dividends > 0:
+		result["dividends"] = dividends
+
 	# 파산 방지 지원금
 	var bailout_thresh: float = _balance.get("difficulty", {}).get("bailout_threshold", 500000)
 	var bailout_amt: float = _balance.get("difficulty", {}).get("bailout_amount", 2000000)
