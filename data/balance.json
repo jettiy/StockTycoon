@@ -1,0 +1,53 @@
+{
+  "player": {
+    "starting_cash": 10000000,
+    "starting_energy": 10,
+    "max_energy": 10,
+    "energy_regen_minutes": 30,
+    "trade_fee_rate": 0.00015,
+    "trade_fee_discount_newbie": 0.5
+  },
+  "difficulty": {
+    "first_trades_guaranteed_profit": 3,
+    "newbie_fee_discount_days": 7,
+    "bailout_threshold": 500000,
+    "bailout_amount": 2000000
+  },
+  "career": {
+    "ranks": [
+      {"rank": "신입사원", "salary": 2500000, "required_net_worth": 0},
+      {"rank": "대리", "salary": 3500000, "required_net_worth": 50000000},
+      {"rank": "과장", "salary": 5000000, "required_net_worth": 200000000},
+      {"rank": "차장", "salary": 7000000, "required_net_worth": 500000000},
+      {"rank": "부장", "salary": 10000000, "required_net_worth": 1000000000},
+      {"rank": "임원", "salary": 20000000, "required_net_worth": 3000000000},
+      {"rank": "CEO", "salary": 50000000, "required_net_worth": 10000000000},
+      {"rank": "전설의 투자자", "salary": 100000000, "required_net_worth": 50000000000}
+    ],
+    "salary_interval_days": 7
+  },
+  "housing": [
+    {"id": "gosiwon", "name": "고시원", "price": 0, "energy_bonus": 0, "happiness": 0},
+    {"id": "wolset", "name": "월셋", "price": 5000000, "energy_bonus": 0, "happiness": 5},
+    {"id": "oneroom", "name": "원룸", "price": 20000000, "energy_bonus": 1, "happiness": 15},
+    {"id": "tworoom", "name": "투룸", "price": 50000000, "energy_bonus": 1, "happiness": 25},
+    {"id": "apartment", "name": "아파트", "price": 200000000, "energy_bonus": 2, "happiness": 40},
+    {"id": "penthouse", "name": "펜트하우스", "price": 1000000000, "energy_bonus": 3, "happiness": 60},
+    {"id": "island", "name": "섬", "price": 5000000000, "energy_bonus": 5, "happiness": 100}
+  ],
+  "vehicles": [
+    {"id": "bicycle", "name": "자전거", "price": 0, "energy_bonus": 0, "happiness": 0},
+    {"id": "usedcar", "name": "중고차", "price": 5000000, "energy_bonus": 0, "happiness": 5},
+    {"id": "semimid", "name": "준중형", "price": 25000000, "energy_bonus": 0, "happiness": 10},
+    {"id": "sedan", "name": "세단", "price": 70000000, "energy_bonus": 1, "happiness": 20},
+    {"id": "sportscar", "name": "스포츠카", "price": 200000000, "energy_bonus": 1, "happiness": 35},
+    {"id": "supercar", "name": "슈퍼카", "price": 500000000, "energy_bonus": 2, "happiness": 55},
+    {"id": "helicopter", "name": "헬기", "price": 2000000000, "energy_bonus": 5, "happiness": 100}
+  ],
+  "market": {
+    "tick_interval_seconds": 2.0,
+    "history_length": 60,
+    "market_cycle_period": 120.0,
+    "market_cycle_amplitude": 0.6
+  }
+}

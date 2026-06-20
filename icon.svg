@@ -1,0 +1,17 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <rect width="128" height="128" rx="16" fill="#0d0f14"/>
+  <!-- candlestick 1 (green) -->
+  <line x1="32" y1="30" x2="32" y2="95" stroke="#26a66a" stroke-width="2"/>
+  <rect x="26" y="45" width="12" height="35" fill="#26a66a" rx="2"/>
+  <!-- candlestick 2 (green, taller) -->
+  <line x1="52" y1="20" x2="52" y2="88" stroke="#26a66a" stroke-width="2"/>
+  <rect x="46" y="32" width="12" height="42" fill="#26a66a" rx="2"/>
+  <!-- candlestick 3 (red, small dip) -->
+  <line x1="72" y1="38" x2="72" y2="90" stroke="#cc4545" stroke-width="2"/>
+  <rect x="66" y="52" width="12" height="28" fill="#cc4545" rx="2"/>
+  <!-- candlestick 4 (green, breakout) -->
+  <line x1="92" y1="15" x2="92" y2="78" stroke="#26a66a" stroke-width="2"/>
+  <rect x="86" y="24" width="12" height="38" fill="#26a66a" rx="2"/>
+  <!-- upward trend line -->
+  <polyline points="20,90 45,72 65,62 88,38 110,28" fill="none" stroke="#3390d4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+</svg>
