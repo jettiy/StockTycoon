@@ -171,14 +171,18 @@
     "rental_income_per_day": {
       "gosiwon": 0,
       "wolset": 0,
-      "oneroom": 20000,
-      "tworoom": 60000,
-      "apartment": 250000,
-      "penthouse": 1200000,
-      "island": 6000000
+      "oneroom": 8000,
+      "tworoom": 20000,
+      "apartment": 60000,
+      "penthouse": 250000,
+      "island": 1000000
     },
-    "interest_rate_daily": 0.0001,
+    "interest_rate_daily": 0.00003,
     "tick_income_interval": 5.0,
-    "passive_display_enabled": true
+    "game_time_acceleration": 10.0,
+    "passive_display_enabled": true,
+    "daily_dividend_cap_pct": 0.05,
+    "daily_rental_cap_pct": 0.03,
+    "daily_interest_cap_pct": 0.01
   }
 }
