@@ -20,13 +20,15 @@ SaveManager="*res://scripts/autoload/SaveManager.gd"
 AutoTradeManager="*res://scripts/autoload/AutoTradeManager.gd"
 EventManager="*res://scripts/autoload/EventManager.gd"
 NPCManager="*res://scripts/autoload/NPCManager.gd"
+AudioManager="*res://scripts/autoload/AudioManager.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+window/stretch/aspect="expand"
+window/handheld/orientation=0
 
 [input]
 

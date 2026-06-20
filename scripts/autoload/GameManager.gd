@@ -6,6 +6,7 @@ signal holdings_changed
 signal net_worth_changed(net_worth: float)
 signal day_advanced(day: int)
 signal rank_up(new_rank: String)
+signal energy_changed(energy: int, max_energy: int)
 
 var player: Dictionary = {}
 
@@ -206,6 +207,10 @@ func advance_day() -> Dictionary:
 	if player["rank_index"] > old_rank:
 		result["rank_up"] = get_rank_name()
 
+	# 정보력 회복 (하루 경과 시)
+	var regen := get_energy_regen_rate()
+	recover_energy(regen)
+
 	# 파산 방지 지원금
 	var bailout_thresh: float = _balance.get("difficulty", {}).get("bailout_threshold", 500000)
 	var bailout_amt: float = _balance.get("difficulty", {}).get("bailout_amount", 2000000)
@@ -306,6 +311,54 @@ func buy_vehicle(vehicle_id: String) -> Dictionary:
 	player["vehicle"] = vehicle_id
 	cash_changed.emit(player["cash"])
 	return {"success": true, "vehicle": vehicle}
+
+
+# ─── 정보력 (에너지) 시스템 ────────────────────────
+
+func get_energy() -> int:
+	return int(player.get("energy", 10))
+
+
+func get_max_energy() -> int:
+	var base: int = int(player.get("max_energy", 10))
+	# 주거 보너스
+	var house: Dictionary = get_current_house()
+	base += int(house.get("energy_bonus", 0))
+	# 차량 보너스
+	var vehicle: Dictionary = get_current_vehicle()
+	base += int(vehicle.get("energy_bonus", 0))
+	# 결혼 버프: 체력 +50%
+	if NPCManager.has_marriage_buff("stamina_boost"):
+		base = int(base * (1.0 + NPCManager.get_marriage_buff("stamina_boost")))
+	# 결혼 디버프: 정보력 -2
+	if NPCManager.has_marriage_buff("energy_penalty"):
+		base -= int(NPCManager.get_marriage_buff("energy_penalty"))
+	return maxi(base, 1)
+
+
+func spend_energy(amount: int) -> bool:
+	if player["energy"] < amount:
+		return false
+	player["energy"] -= amount
+	energy_changed.emit(get_energy(), get_max_energy())
+	return true
+
+
+func recover_energy(amount: int) -> void:
+	var max_e := get_max_energy()
+	player["energy"] = mini(player["energy"] + amount, max_e)
+	energy_changed.emit(get_energy(), get_max_energy())
+
+
+func get_energy_regen_rate() -> int:
+	# 하루당 회복량: 기본 3 + 주거 보너스
+	var rate := 3
+	var house: Dictionary = get_current_house()
+	rate += int(house.get("energy_bonus", 0))
+	# 결혼 디버프: 정보력 회복 -1
+	if NPCManager.has_marriage_buff("energy_regen"):
+		rate += int(NPCManager.get_marriage_buff("energy_regen"))
+	return maxi(rate, 1)
 
 
 # ─── 유틸 ──────────────────────────────────────

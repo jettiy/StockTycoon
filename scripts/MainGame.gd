@@ -2,6 +2,8 @@ extends Control
 ## MainGame — 메인 게임 화면
 ## 씬 에디터 기반: 정적 UI는 main.tscn에 정의, 동적 데이터만 코드에서 생성
 
+const UIAnim := preload("res://scripts/UIAnim.gd")
+
 # 색상 (Theme과 별도로 코드에서 직접 사용하는 색)
 const COL_UP := Color(0.15, 0.65, 0.39, 1)
 const COL_DOWN := Color(0.80, 0.27, 0.27, 1)
@@ -651,6 +653,7 @@ func _apply_cat_filter() -> void:
 func _on_stock_clicked(sid: String) -> void:
 	_selected_stock = sid
 	_trade_panel.visible = true
+	UIAnim.slide_in_from_bottom(_trade_panel, 20.0, 0.2)
 	_update_trade_panel()
 
 
@@ -692,9 +695,12 @@ func _on_buy() -> void:
 	var qty := int(_trade_qty_edit.value)
 	var r := GameManager.buy_stock(_selected_stock, qty)
 	if r.get("success"):
+		AudioManager.play_buy()
+		UIAnim.pulse(_trade_panel)
 		_show_toast("매수 완료: %d주 (%s)" % [qty, _fmt_won(r["cost"])])
 		_update_trade_panel()
 	else:
+		AudioManager.play_error()
 		_show_toast("실패: " + r.get("reason", ""))
 
 
@@ -704,6 +710,8 @@ func _on_sell() -> void:
 	var qty := int(_trade_qty_edit.value)
 	var r := GameManager.sell_stock(_selected_stock, qty)
 	if r.get("success"):
+		AudioManager.play_sell()
+		UIAnim.pulse(_trade_panel)
 		var pt := ""
 		if r.has("profit"):
 			var p: float = r["profit"]
@@ -711,18 +719,22 @@ func _on_sell() -> void:
 		_show_toast("매도 완료: %d주%s" % [qty, pt])
 		_update_trade_panel()
 	else:
+		AudioManager.play_error()
 		_show_toast("실패: " + r.get("reason", ""))
 
 
 func _on_advance_day() -> void:
 	var r := GameManager.advance_day()
 	MarketSim.advance_day()
+	AudioManager.play_day_advance()
 	var msg := "%d일차" % r["day"]
 	if r.get("salary", 0.0) > 0:
 		msg += " | 월급 +%s" % _fmt_won(r["salary"])
 	if r.get("rank_up", "") != "":
 		msg += " | 승진! -> %s" % r["rank_up"]
 		_rank_label.text = "  " + GameManager.get_rank_name()
+		AudioManager.play_rank_up()
+		UIAnim.pop_in(_rank_label)
 	if r.has("bailout"):
 		msg += " | 파산방지 +%s" % _fmt_won(r["bailout"])
 	_day_label.text = "%d일차" % r["day"]
@@ -740,6 +752,15 @@ func _on_advance_day() -> void:
 		elif event.has("loss") and float(event["loss"]) > 0:
 			extra = " (-%.0f원 손실)" % float(event["loss"])
 		_show_toast("[이벤트] %s%s" % [etitle, extra])
+		# 이벤트 사운드
+		match etype:
+			"news": AudioManager.play_event_news()
+			"crypto_risk": AudioManager.play_event_bad()
+			"life":
+				if event.get("reward", 0.0) >= 0:
+					AudioManager.play_event_news()
+				else:
+					AudioManager.play_event_bad()
 	# 오래된 이벤트 정리
 	EventManager.clear_old_events()
 
@@ -779,6 +800,7 @@ func _on_salary_paid(a: float) -> void:
 func _on_auto_trade_executed(slot: Dictionary, _r: Dictionary) -> void:
 	var s: Dictionary = MarketSim.get_stock(slot["stock_id"])
 	var act := "매수" if slot["action"] == "buy" else "매도"
+	AudioManager.play_auto_trade()
 	_show_toast("자동매매: %s %s %d주" % [s.get("name", ""), act, slot["quantity"]])
 
 
@@ -1275,9 +1297,11 @@ func _on_marry(npc_id: String) -> void:
 	var result := NPCManager.marry(npc_id)
 	if result.get("success"):
 		var npc: Dictionary = result["npc"]
+		AudioManager.play_marriage()
 		_show_toast("결혼! %s와(과) 결혼했습니다" % npc.get("name", ""))
 		_refresh_npc_view()
 	else:
+		AudioManager.play_error()
 		_show_toast("실패: " + result.get("reason", ""))
 
 
@@ -1305,8 +1329,11 @@ func _show_toast(msg: String) -> void:
 	_toast.text = msg
 	_toast.visible = true
 	_toast.modulate.a = 1.0
+	_toast.position.y = 70
+	# 슬라이드 인 + 페이드 아웃
 	var tw := create_tween()
-	tw.tween_interval(2.0)
+	tw.tween_property(_toast, "position:y", 60, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_interval(1.8)
 	tw.tween_property(_toast, "modulate:a", 0.0, 0.5)
 	tw.tween_callback(func(): _toast.visible = false)
 
