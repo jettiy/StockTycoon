@@ -16,6 +16,8 @@ func save_game() -> bool:
 		"player": GameManager.player,
 		"market": _serialize_market(),
 		"autotrade": AutoTradeManager.slots,
+		"npc": NPCManager.serialize(),
+		"events": {"active": EventManager.get_active_events()},
 		"timestamp": Time.get_unix_time_from_system(),
 	}
 
@@ -55,6 +57,14 @@ func load_game() -> bool:
 	# 자동매매 복원
 	if data.has("autotrade"):
 		_deserialize_autotrade(data["autotrade"])
+
+	# NPC 복원
+	if data.has("npc"):
+		NPCManager.deserialize(data["npc"])
+
+	# 이벤트 복원
+	if data.has("events") and data["events"].has("active"):
+		EventManager._active_events = data["events"]["active"]
 
 	loaded.emit()
 	return true

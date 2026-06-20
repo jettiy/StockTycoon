@@ -1,0 +1,137 @@
+{
+  "rivals": [
+    {
+      "id": "goldberg",
+      "name": "골드버그",
+      "role": "외국계 펀드매니저",
+      "desc": "월스트리트 출신. 단기 수익률의 제왕.",
+      "avatar_color": "#D4AF37",
+      "initial_affinity": 0
+    },
+    {
+      "id": "queen_realtime",
+      "name": "실시간 퀸",
+      "role": "데이트레이딩 여왕",
+      "desc": "하루 500거래. 실시간 차트 장인.",
+      "avatar_color": "#E91E8C",
+      "initial_affinity": 0
+    },
+    {
+      "id": "algo_k",
+      "name": "알고리즘 K",
+      "role": "AI 퀀트 개발자",
+      "desc": "자동매매 알고리즘으로 수익 창출.",
+      "avatar_color": "#00BCD4",
+      "initial_affinity": 0
+    }
+  ],
+  "helpers": [
+    {
+      "id": "kim_info",
+      "name": "김정보",
+      "role": "정보통 중개인",
+      "desc": "증권가 소문의 원조. 유료로 내부 정보 제공.",
+      "avatar_color": "#8BC34A",
+      "initial_affinity": 20,
+      "service_cost": 500000,
+      "service_desc": "다가오는 뉴스 이벤트를 미리 알려줌"
+    },
+    {
+      "id": "ajumma_broker",
+      "name": "아줌마 중개인",
+      "role": "수수료 할인 브로커",
+      "desc": "20년 차 영업왕. 수수료를 깎아준다.",
+      "avatar_color": "#FF9800",
+      "initial_affinity": 30,
+      "service_cost": 0,
+      "service_desc": "호감도 50 이상 시 수수료 20% 할인"
+    },
+    {
+      "id": "taxi_driver",
+      "name": "택시기사",
+      "role": "소문꾼",
+      "desc": "매일 다른 승객에게 소문을 듣는다.",
+      "avatar_color": "#FFC107",
+      "initial_affinity": 40,
+      "service_cost": 0,
+      "service_desc": "무작위 팁 제공 (가끔 핵심 정보)"
+    }
+  ],
+  "marriage_targets": [
+    {
+      "id": "chae_inyoung",
+      "name": "채인영",
+      "role": "세무회계사",
+      "desc": "차가운 미인. 절세의 여왕.",
+      "avatar_color": "#7C4DFF",
+      "buff": "세금 30% 절약",
+      "debuff": "정보력 회복 -1",
+      "buff_type": "tax_cut",
+      "buff_value": 0.3,
+      "debuff_type": "energy_regen",
+      "debuff_value": -1,
+      "required_affinity": 80,
+      "gift_cost": 10000000
+    },
+    {
+      "id": "do_yoonjae",
+      "name": "도윤재",
+      "role": "변호사",
+      "desc": "내부자 거래 한 번쯤은 커버해 줄 남자.",
+      "avatar_color": "#3F51B5",
+      "buff": "내부자거래 면책 1회",
+      "debuff": "월급 -20%",
+      "buff_type": "legal_immunity",
+      "buff_value": 1,
+      "debuff_type": "salary_cut",
+      "debuff_value": 0.2,
+      "required_affinity": 80,
+      "gift_cost": 15000000
+    },
+    {
+      "id": "seo_harin",
+      "name": "서하린",
+      "role": "경제기자",
+      "desc": "뉴스보다 빠른 선입수의 여왕.",
+      "avatar_color": "#E91E63",
+      "buff": "뉴스 선입수 확률 +50%",
+      "debuff": "수수료 +10%",
+      "buff_type": "early_news",
+      "buff_value": 0.5,
+      "debuff_type": "fee_increase",
+      "debuff_value": 0.1,
+      "required_affinity": 75,
+      "gift_cost": 8000000
+    },
+    {
+      "id": "kang_siu",
+      "name": "강시우",
+      "role": "퀀트 개발자",
+      "desc": "조용하지만 자동매매의 천재.",
+      "avatar_color": "#00BCD4",
+      "buff": "자동매매 슬롯 +2",
+      "debuff": "수동매매 수익 -15%",
+      "buff_type": "extra_slots",
+      "buff_value": 2,
+      "debuff_type": "manual_penalty",
+      "debuff_value": 0.15,
+      "required_affinity": 75,
+      "gift_cost": 12000000
+    },
+    {
+      "id": "yoon_chaea",
+      "name": "윤채아",
+      "role": "성형외과 의사",
+      "desc": "돈 많고 예쁜 의사. 체력의 여왕.",
+      "avatar_color": "#FF4081",
+      "buff": "체력 +50%, 주간 보너스",
+      "debuff": "정보력 -2",
+      "buff_type": "stamina_boost",
+      "buff_value": 0.5,
+      "debuff_type": "energy_penalty",
+      "debuff_value": 2,
+      "required_affinity": 70,
+      "gift_cost": 20000000
+    }
+  ]
+}

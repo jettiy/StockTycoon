@@ -1,0 +1,165 @@
+{
+  "news": [
+    {
+      "id": "samsung_ai_breakthrough",
+      "title": "삼전전자, 차세대 AI 반도체 발표",
+      "desc": "혁신적인 2nm 공정 AI 칩 발표. 시장 들끓어오름.",
+      "stock_ids": ["samsung", "skhynix"],
+      "impact": 0.6,
+      "weight": 10,
+      "category": "tech"
+    },
+    {
+      "id": "nvidia_earnings_beat",
+      "title": "엔비디칩, 분기 실적 대폭 상회",
+      "desc": "AI 수요 폭증으로 예상치 200% 초과 달성.",
+      "stock_ids": ["nvidia", "apple", "microsoft"],
+      "impact": 0.8,
+      "weight": 8,
+      "category": "earnings"
+    },
+    {
+      "id": "tesla_robo_taxi",
+      "title": "테슬라모터, 로보택시 전국 확대 발표",
+      "desc": "자율주행 레벨5 승인. 주가 급등 예상.",
+      "stock_ids": ["tesla"],
+      "impact": 0.7,
+      "weight": 6,
+      "category": "news"
+    },
+    {
+      "id": "bitcoin_etf_approval",
+      "title": "비트코인 현물 ETF 추가 승인",
+      "desc": "기관 자금 대거 유입. 코인 시장 전체 강세.",
+      "stock_ids": ["bitcoin", "ethereum", "solana"],
+      "impact": 0.9,
+      "weight": 5,
+      "category": "crypto"
+    },
+    {
+      "id": "doge_celebrity_tweet",
+      "title": "유력 인사, 도지코인 언급 트윗",
+      "desc": "한 트윗에 도지코인 30% 급등.",
+      "stock_ids": ["dogecoin"],
+      "impact": 0.5,
+      "weight": 7,
+      "category": "crypto"
+    },
+    {
+      "id": "kakaobank_record_profit",
+      "title": "카카오뱅크, 분기 최대 순이익 경신",
+      "desc": "대출 성장 + 수익성 개선. 금융주 강세.",
+      "stock_ids": ["kakaobank"],
+      "impact": 0.4,
+      "weight": 8,
+      "category": "earnings"
+    },
+    {
+      "id": "apple_vision_pro2",
+      "title": "애플텍, 비전 프로 2세대 발표",
+      "desc": "대중화 가격대 MR 기기. 사전 예약 500만대.",
+      "stock_ids": ["apple", "google", "meta"],
+      "impact": 0.5,
+      "weight": 7,
+      "category": "product"
+    },
+    {
+      "id": "market_crash_warning",
+      "title": "미국 연준, 금리 인상 시사",
+      "desc": "인플레이션 우려로 전 시장 급락.",
+      "stock_ids": ["apple", "tesla", "nvidia", "microsoft", "meta", "amazon", "google"],
+      "impact": -0.7,
+      "weight": 4,
+      "category": "macro"
+    },
+    {
+      "id": "korea_regulation",
+      "title": "한국, 반도체 수출 규제 완화",
+      "desc": "정부 지원 정책. 한국 반도체주 일제히 상승.",
+      "stock_ids": ["samsung", "skhynix"],
+      "impact": 0.3,
+      "weight": 9,
+      "category": "policy"
+    },
+    {
+      "id": "amazon_holiday_sales",
+      "title": "아마존딜리버리, 연말 시즌 매출 신기록",
+      "desc": "블랙프라이데이 사상 최대 규모 판매.",
+      "stock_ids": ["amazon"],
+      "impact": 0.35,
+      "weight": 8,
+      "category": "earnings"
+    }
+  ],
+  "crypto_risks": [
+    {
+      "id": "exchange_hack",
+      "title": "대형 거래소 해킹 발생",
+      "desc": "고객 자산 일부 유출. 코인 시장 패닉.",
+      "impact": -0.6,
+      "loss_pct": 0.15,
+      "weight": 3
+    },
+    {
+      "id": "whale_dump",
+      "title": "고래 대량 매도 덤핑",
+      "desc": "거대 보유자가 대량 매도. 단기 급락.",
+      "impact": -0.4,
+      "loss_pct": 0,
+      "weight": 5
+    },
+    {
+      "id": "regulation_fud",
+      "title": "주요국 코인 규제 발표",
+      "desc": "규제 불확실성으로 시장 위축.",
+      "impact": -0.3,
+      "loss_pct": 0,
+      "weight": 4
+    },
+    {
+      "id": "stablecoin_depeg",
+      "title": "스테이블코인 달러스 연동 붕괴",
+      "desc": "스테이블코인 가치 하락. 코인 전반 하락.",
+      "impact": -0.5,
+      "loss_pct": 0.05,
+      "weight": 2
+    }
+  ],
+  "life_events": [
+    {
+      "id": "lottery",
+      "title": "복권 당첨!",
+      "desc": "길 가다 산 복권이 2등에 당첨.",
+      "cash_reward": 50000000,
+      "weight": 1
+    },
+    {
+      "id": "tax_refund",
+      "title": "연말정산 환급",
+      "desc": "예상보다 큰 세금 환급.",
+      "cash_reward": 3000000,
+      "weight": 8
+    },
+    {
+      "id": "medical_bill",
+      "title": "건강검진 이상 소견",
+      "desc": "치료비 지출. (주거 단계에 따라 할인)",
+      "cash_reward": -5000000,
+      "weight": 5
+    },
+    {
+      "id": "side_hustle",
+      "title": "부업 성공",
+      "desc": "야간 투자 유튜브가 의외의 히트.",
+      "cash_reward": 15000000,
+      "weight": 3
+    },
+    {
+      "id": "gift_from_parent",
+      "title": "부모님 용돈",
+      "desc": "부모님이 용돈을 쏘셨다.",
+      "cash_reward": 2000000,
+      "weight": 10
+    }
+  ]
+}

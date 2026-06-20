@@ -14,7 +14,7 @@ const COL_PANEL_LIGHT := Color(0.122, 0.126, 0.138, 1)
 
 const CATEGORY_FILTERS := ["전체", "한국", "미국", "코인"]
 const CATEGORY_MAP := {"전체": "", "한국": "korea", "미국": "usa", "코인": "coin"}
-const VIEW_TABS := ["시장", "자동매매", "라이프"]
+const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
 
 # ─── 씬 노드 참조 (@onready로 씬 트리에서 자동 연결) ───
 @onready var _rank_label: Label = %RankLabel
@@ -55,6 +55,17 @@ var _autotrade_slots: Array = []
 var _life_housing_container: VBoxContainer
 var _life_vehicle_container: VBoxContainer
 
+# NPC 뷰
+var _npc_view: VBoxContainer
+var _npc_container: VBoxContainer
+
+# 이벤트 뷰
+var _event_view: VBoxContainer
+var _event_container: VBoxContainer
+
+# 세대교체 버튼
+var _gen_button: Button
+
 
 # ═══════════════════════════════════════════════
 func _ready() -> void:
@@ -62,6 +73,8 @@ func _ready() -> void:
 	_build_market_view()
 	_build_autotrade_view()
 	_build_life_view()
+	_build_npc_view()
+	_build_event_view()
 	_show_view("시장")
 	_refresh_all()
 	_connect_signals()
@@ -84,6 +97,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_1: _show_view("시장")
 			KEY_2: _show_view("자동매매")
 			KEY_3: _show_view("라이프")
+			KEY_4: _show_view("NPC")
+			KEY_5: _show_view("이벤트")
 			KEY_SPACE: if _current_view == "시장": _on_advance_day()
 			KEY_ESCAPE: _close_trade_panel()
 
@@ -577,10 +592,16 @@ func _show_view(view_name: String) -> void:
 	_market_view.visible = (view_name == "시장")
 	_autotrade_view.visible = (view_name == "자동매매")
 	_life_view.visible = (view_name == "라이프")
+	_npc_view.visible = (view_name == "NPC")
+	_event_view.visible = (view_name == "이벤트")
 	_cat_tabs.visible = (view_name == "시장")
 	for child in _view_tabs.get_children():
 		if child is Button and child.has_meta("view"):
 			_update_view_tab_style(child, child.get_meta("view") == view_name)
+	# 뷰 진입 시 새로고침
+	match view_name:
+		"NPC": _refresh_npc_view()
+		"이벤트": _refresh_event_view()
 
 
 func _on_view_tab_pressed(vn: String) -> void:
@@ -700,12 +721,27 @@ func _on_advance_day() -> void:
 	if r.get("salary", 0.0) > 0:
 		msg += " | 월급 +%s" % _fmt_won(r["salary"])
 	if r.get("rank_up", "") != "":
-		msg += " | 승진! → %s" % r["rank_up"]
+		msg += " | 승진! -> %s" % r["rank_up"]
 		_rank_label.text = "  " + GameManager.get_rank_name()
 	if r.has("bailout"):
 		msg += " | 파산방지 +%s" % _fmt_won(r["bailout"])
 	_day_label.text = "%d일차" % r["day"]
 	_show_toast(msg)
+
+	# 일일 이벤트 발생
+	var events := EventManager.roll_daily_events()
+	for event in events:
+		var etype: String = event.get("type", "")
+		var etitle: String = event.get("title", "")
+		var extra := ""
+		if event.has("reward"):
+			var rw: float = event["reward"]
+			extra = " (%+.0f원)" % rw
+		elif event.has("loss") and float(event["loss"]) > 0:
+			extra = " (-%.0f원 손실)" % float(event["loss"])
+		_show_toast("[이벤트] %s%s" % [etitle, extra])
+	# 오래된 이벤트 정리
+	EventManager.clear_old_events()
 
 
 func _on_save() -> void:
@@ -885,6 +921,378 @@ func _update_stock_row(sid: String) -> void:
 
 
 # ═══════════════════════════════════════════════
+#   NPC 뷰
+# ═══════════════════════════════════════════════
+
+func _build_npc_view() -> void:
+	_npc_view = VBoxContainer.new()
+	_npc_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_npc_view.visible = false
+	_content.add_child(_npc_view)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_npc_view.add_child(scroll)
+
+	_npc_container = VBoxContainer.new()
+	_npc_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_npc_container.add_theme_constant_override("separation", 6)
+	scroll.add_child(_npc_container)
+
+	# 세대교체 버튼 (결혼한 경우만)
+	_gen_button = Button.new()
+	_gen_button.text = "세대교체 (New Game+)"
+	_gen_button.custom_minimum_size = Vector2(0, 44)
+	_gen_button.add_theme_font_size_override("font_size", 15)
+	_gen_button.add_theme_color_override("font_color", COL_GOLD)
+	_gen_button.pressed.connect(_on_generation_advance)
+	_npc_view.add_child(_gen_button)
+
+
+func _refresh_npc_view() -> void:
+	for c in _npc_container.get_children():
+		c.queue_free()
+
+	# 결혼 상태 표시
+	var spouse_id := NPCManager.get_spouse_id()
+	if spouse_id != "":
+		var spouse := NPCManager.get_spouse()
+		var sbox := _npc_section_label("결혼 중: %s (%s)" % [spouse.get("name", ""), spouse.get("role", "")])
+		_npc_container.add_child(sbox)
+		# 버프 표시
+		var buff_label := Label.new()
+		buff_label.text = "  버프: %s | 디버프: %s" % [spouse.get("buff", "-"), spouse.get("debuff", "-")]
+		buff_label.add_theme_font_size_override("font_size", 12)
+		buff_label.add_theme_color_override("font_color", COL_UP)
+		_npc_container.add_child(buff_label)
+		_npc_container.add_child(_spacer(8))
+
+	# 라이벌 섹션
+	_npc_container.add_child(_npc_section_label("라이벌"))
+	for npc in NPCManager.get_npcs_by_category("rivals"):
+		_npc_container.add_child(_create_npc_row(npc, "rival"))
+	_npc_container.add_child(_spacer(8))
+
+	# 도움 NPC 섹션
+	_npc_container.add_child(_npc_section_label("도움 NPC"))
+	for npc in NPCManager.get_npcs_by_category("helpers"):
+		_npc_container.add_child(_create_npc_row(npc, "helper"))
+	_npc_container.add_child(_spacer(8))
+
+	# 결혼 대상 섹션
+	_npc_container.add_child(_npc_section_label("결혼 대상"))
+	for npc in NPCManager.get_npcs_by_category("marriage_targets"):
+		_npc_container.add_child(_create_npc_row(npc, "marriage"))
+
+	# 세대교체 버튼 가시성
+	_gen_button.visible = NPCManager.is_married()
+
+
+func _npc_section_label(text: String) -> Label:
+	var l := Label.new()
+	l.text = "  " + text
+	l.add_theme_font_size_override("font_size", 18)
+	l.add_theme_color_override("font_color", COL_ACCENT)
+	return l
+
+
+func _create_npc_row(npc: Dictionary, type: String) -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 6))
+	panel.custom_minimum_size = Vector2(0, 80)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 3)
+	panel.add_child(vbox)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 10)
+
+	# 이름 + 역할
+	var name_box := VBoxContainer.new()
+	name_box.add_theme_constant_override("separation", 1)
+
+	var name := Label.new()
+	name.text = "  " + npc.get("name", "")
+	name.add_theme_font_size_override("font_size", 15)
+	name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	name_box.add_child(name)
+
+	var role := Label.new()
+	role.text = "  " + npc.get("role", "")
+	role.add_theme_font_size_override("font_size", 11)
+	role.add_theme_color_override("font_color", COL_TEXT_DIM)
+	name_box.add_child(role)
+	hbox.add_child(name_box)
+
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(sp)
+
+	# 호감도
+	var aff := NPCManager.get_affinity(npc["id"])
+	var aff_label := Label.new()
+	aff_label.text = "%s (%d)" % [NPCManager.get_affinity_level(npc["id"]), aff]
+	aff_label.add_theme_font_size_override("font_size", 13)
+	aff_label.custom_minimum_size = Vector2(100, 0)
+	aff_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	aff_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if aff >= 50:
+		aff_label.add_theme_color_override("font_color", COL_UP)
+	elif aff < 0:
+		aff_label.add_theme_color_override("font_color", COL_DOWN)
+	else:
+		aff_label.add_theme_color_override("font_color", COL_TEXT_DIM)
+	hbox.add_child(aff_label)
+
+	vbox.add_child(hbox)
+
+	# 설명 + 액션 버튼
+	var action_row := HBoxContainer.new()
+	action_row.add_theme_constant_override("separation", 8)
+	action_box_offset(action_row)
+
+	var desc := Label.new()
+	desc.text = "  " + npc.get("desc", "")
+	desc.add_theme_font_size_override("font_size", 11)
+	desc.add_theme_color_override("font_color", COL_TEXT_DIM)
+	desc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.add_child(desc)
+
+	# 타입별 액션 버튼
+	match type:
+		"rival":
+			var btn := Button.new()
+			btn.text = "대결"
+			btn.custom_minimum_size = Vector2(60, 28)
+			btn.add_theme_font_size_override("font_size", 12)
+			btn.add_theme_color_override("font_color", COL_DOWN)
+			btn.pressed.connect(_on_rival_challenge.bind(npc["id"]))
+			action_row.add_child(btn)
+
+			# 전적
+			var record := NPCManager.get_rival_record(npc["id"])
+			var rec_label := Label.new()
+			rec_label.text = "W%d/L%d" % [record.get("wins", 0), record.get("losses", 0)]
+			rec_label.add_theme_font_size_override("font_size", 11)
+			rec_label.add_theme_color_override("font_color", COL_TEXT_DIM)
+			action_row.add_child(rec_label)
+
+		"helper":
+			var svc_btn := Button.new()
+			var cost: float = float(npc.get("service_cost", 0))
+			svc_btn.text = "서비스" + (" (%.0f만)" % (cost / 10000) if cost > 0 else "")
+			svc_btn.custom_minimum_size = Vector2(90, 28)
+			svc_btn.add_theme_font_size_override("font_size", 12)
+			svc_btn.pressed.connect(_on_helper_service.bind(npc["id"]))
+			action_row.add_child(svc_btn)
+
+		"marriage":
+			if NPCManager.get_spouse_id() == npc["id"]:
+				var cur := Label.new()
+				cur.text = "배우자"
+				cur.add_theme_font_size_override("font_size", 13)
+				cur.add_theme_color_override("font_color", COL_UP)
+				action_row.add_child(cur)
+			elif not NPCManager.is_married():
+				var gift_btn := Button.new()
+				gift_btn.text = "선물 (100만)"
+				gift_btn.custom_minimum_size = Vector2(90, 28)
+				gift_btn.add_theme_font_size_override("font_size", 12)
+				gift_btn.add_theme_color_override("font_color", COL_ACCENT)
+				gift_btn.pressed.connect(_on_give_gift.bind(npc["id"], 1000000))
+				action_row.add_child(gift_btn)
+
+				var req: int = int(npc.get("required_affinity", 80))
+				if NPCManager.get_affinity(npc["id"]) >= req:
+					var marry_btn := Button.new()
+					marry_btn.text = "프로포즈"
+					marry_btn.custom_minimum_size = Vector2(80, 28)
+					marry_btn.add_theme_font_size_override("font_size", 12)
+					marry_btn.add_theme_color_override("font_color", COL_UP)
+					marry_btn.pressed.connect(_on_marry.bind(npc["id"]))
+					action_row.add_child(marry_btn)
+
+	vbox.add_child(action_row)
+	return panel
+
+
+func action_box_offset(row: HBoxContainer) -> void:
+	row.offset_left = 16
+	row.offset_right = -16
+
+
+# ═══════════════════════════════════════════════
+#   이벤트 뷰
+# ═══════════════════════════════════════════════
+
+func _build_event_view() -> void:
+	_event_view = VBoxContainer.new()
+	_event_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_event_view.visible = false
+	_content.add_child(_event_view)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_event_view.add_child(scroll)
+
+	_event_container = VBoxContainer.new()
+	_event_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_event_container.add_theme_constant_override("separation", 4)
+	scroll.add_child(_event_container)
+
+
+func _refresh_event_view() -> void:
+	for c in _event_container.get_children():
+		c.queue_free()
+
+	var events := EventManager.get_active_events()
+	if events.is_empty():
+		var empty := Label.new()
+		empty.text = "  진행 중인 이벤트가 없습니다"
+		empty.add_theme_font_size_override("font_size", 14)
+		empty.add_theme_color_override("font_color", COL_TEXT_DIM)
+		_event_container.add_child(empty)
+		return
+
+	# 최신순 정렬
+	events.reverse()
+
+	for event in events:
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 4))
+		panel.custom_minimum_size = Vector2(0, 60)
+
+		var vbox := VBoxContainer.new()
+		vbox.add_theme_constant_override("separation", 2)
+		panel.add_child(vbox)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 8)
+
+		# 타입 아이콘 (텍스트)
+		var type_text := ""
+		var type_color: Color = COL_TEXT_DIM
+		match event.get("type", ""):
+			"news":
+				type_text = "[뉴스]"
+				type_color = COL_ACCENT
+			"crypto_risk":
+				type_text = "[코인리스크]"
+				type_color = COL_DOWN
+			"life":
+				type_text = "[생활]"
+				type_color = COL_UP
+
+		var tag := Label.new()
+		tag.text = "  " + type_text
+		tag.add_theme_font_size_override("font_size", 12)
+		tag.add_theme_color_override("font_color", type_color)
+		hbox.add_child(tag)
+
+		var day := Label.new()
+		day.text = "%d일차" % event.get("day", 0)
+		day.add_theme_font_size_override("font_size", 11)
+		day.add_theme_color_override("font_color", COL_TEXT_DIM)
+		hbox.add_child(day)
+
+		var sp := Control.new()
+		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(sp)
+
+		# 손익 표시
+		if event.has("reward"):
+			var reward: float = event["reward"]
+			var r_label := Label.new()
+			if reward >= 0:
+				r_label.text = "+%.0f원" % reward
+				r_label.add_theme_color_override("font_color", COL_UP)
+			else:
+				r_label.text = "%.0f원" % reward
+				r_label.add_theme_color_override("font_color", COL_DOWN)
+			r_label.add_theme_font_size_override("font_size", 13)
+			hbox.add_child(r_label)
+		elif event.has("loss") and float(event["loss"]) > 0:
+			var l_label := Label.new()
+			l_label.text = "-%.0f원 손실" % float(event["loss"])
+			l_label.add_theme_font_size_override("font_size", 13)
+			l_label.add_theme_color_override("font_color", COL_DOWN)
+			hbox.add_child(l_label)
+
+		vbox.add_child(hbox)
+
+		# 제목 + 설명
+		var title := Label.new()
+		title.text = "  " + event.get("title", "")
+		title.add_theme_font_size_override("font_size", 14)
+		title.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+		vbox.add_child(title)
+
+		var desc := Label.new()
+		desc.text = "  " + event.get("desc", "")
+		desc.add_theme_font_size_override("font_size", 12)
+		desc.add_theme_color_override("font_color", COL_TEXT_DIM)
+		vbox.add_child(desc)
+
+		_event_container.add_child(panel)
+
+
+# ═══════════════════════════════════════════════
+#   NPC 이벤트 핸들러
+# ═══════════════════════════════════════════════
+
+func _on_rival_challenge(npc_id: String) -> void:
+	var result := NPCManager.challenge_rival(npc_id)
+	if result.get("success"):
+		if result.get("won"):
+			_show_toast("승리! 보상 +%s" % _fmt_won(result["reward"]))
+		else:
+			_show_toast("패배... -%s" % _fmt_won(result["penalty"]))
+		_refresh_npc_view()
+	else:
+		_show_toast("실패: " + result.get("reason", ""))
+
+
+func _on_helper_service(npc_id: String) -> void:
+	var result := NPCManager.use_helper_service(npc_id)
+	if result.get("success"):
+		_show_toast(result.get("desc", "서비스 완료"))
+		_refresh_npc_view()
+	else:
+		_show_toast("실패: " + result.get("reason", ""))
+
+
+func _on_give_gift(npc_id: String, amount: float) -> void:
+	var result := NPCManager.give_gift(npc_id, amount)
+	if result.get("success"):
+		_show_toast("호감도 +%d → %d" % [result["gain"], result["affinity"]])
+		_refresh_npc_view()
+	else:
+		_show_toast("실패: " + result.get("reason", ""))
+
+
+func _on_marry(npc_id: String) -> void:
+	var result := NPCManager.marry(npc_id)
+	if result.get("success"):
+		var npc: Dictionary = result["npc"]
+		_show_toast("결혼! %s와(과) 결혼했습니다" % npc.get("name", ""))
+		_refresh_npc_view()
+	else:
+		_show_toast("실패: " + result.get("reason", ""))
+
+
+func _on_generation_advance() -> void:
+	var result := NPCManager.start_new_generation()
+	if result.get("success"):
+		_show_toast("세대교체! %d대 — 상속 %s" % [result["new_generation"], _fmt_won(result["inherited_cash"])])
+		_refresh_npc_view()
+		_refresh_all()
+		_refresh_life_view()
+	else:
+		_show_toast("실패: " + result.get("reason", ""))
+
+
+# ═══════════════════════════════════════════════
 #   헬퍼
 # ═══════════════════════════════════════════════
 
@@ -943,6 +1351,13 @@ func _fmt_won(a: float) -> String:
 func _fmt_change(p: float) -> String:
 	var sign := "+" if p >= 0 else ""
 	return sign + "%.2f" % p + "%"
+
+
+
+func _spacer(height: float) -> Control:
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(0, height)
+	return c
 
 
 func _flat(bg: Color, radius: int) -> StyleBoxFlat:

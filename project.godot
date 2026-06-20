@@ -18,6 +18,8 @@ GameManager="*res://scripts/autoload/GameManager.gd"
 MarketSim="*res://scripts/autoload/MarketSim.gd"
 SaveManager="*res://scripts/autoload/SaveManager.gd"
 AutoTradeManager="*res://scripts/autoload/AutoTradeManager.gd"
+EventManager="*res://scripts/autoload/EventManager.gd"
+NPCManager="*res://scripts/autoload/NPCManager.gd"
 
 [display]
 
