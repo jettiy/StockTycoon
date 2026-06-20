@@ -1,41 +1,39 @@
 extends Control
-## MainGame — 메인 게임 화면 (3탭: 시장 / 자동매매 / 라이프)
+## MainGame — 메인 게임 화면
+## 씬 에디터 기반: 정적 UI는 main.tscn에 정의, 동적 데이터만 코드에서 생성
 
-# ─── 색상 ──────────────────────────────────────
-const COL_BG := Color(0.063, 0.067, 0.078, 1)
-const COL_PANEL := Color(0.094, 0.098, 0.110, 1)
-const COL_PANEL_LIGHT := Color(0.122, 0.126, 0.138, 1)
-const COL_BORDER := Color(0.18, 0.18, 0.20, 1)
-const COL_ACCENT := Color(0.20, 0.56, 0.85, 1)
+# 색상 (Theme과 별도로 코드에서 직접 사용하는 색)
 const COL_UP := Color(0.15, 0.65, 0.39, 1)
 const COL_DOWN := Color(0.80, 0.27, 0.27, 1)
-const COL_TEXT := Color(0.82, 0.82, 0.85, 1)
+const COL_ACCENT := Color(0.20, 0.56, 0.85, 1)
+const COL_GOLD := Color(0.85, 0.70, 0.30, 1)
 const COL_TEXT_DIM := Color(0.50, 0.50, 0.55, 1)
 const COL_TEXT_BRIGHT := Color(0.95, 0.95, 0.97, 1)
-const COL_GOLD := Color(0.85, 0.70, 0.30, 1)
+const COL_PANEL := Color(0.094, 0.098, 0.110, 1)
+const COL_PANEL_LIGHT := Color(0.122, 0.126, 0.138, 1)
 
 const CATEGORY_FILTERS := ["전체", "한국", "미국", "코인"]
 const CATEGORY_MAP := {"전체": "", "한국": "korea", "미국": "usa", "코인": "coin"}
 const VIEW_TABS := ["시장", "자동매매", "라이프"]
 
-# ─── UI 노드 ────────────────────────────────────
-var _top_bar: HBoxContainer
-var _view_tab_bar: HBoxContainer
-var _cat_tab_bar: HBoxContainer
-var _content: VBoxContainer
-var _toast_label: Label
+# ─── 씬 노드 참조 (@onready로 씬 트리에서 자동 연결) ───
+@onready var _rank_label: Label = %RankLabel
+@onready var _cash_label: Label = %CashLabel
+@onready var _networth_label: Label = %NetWorthLabel
+@onready var _day_label: Label = %DayLabel
+@onready var _advance_btn: Button = %AdvanceButton
+@onready var _view_tabs: HBoxContainer = %ViewTabs
+@onready var _cat_tabs: HBoxContainer = %CatTabs
+@onready var _content: VBoxContainer = %ContentArea
+@onready var _toast: Label = %ToastLabel
 
-var _cash_label: Label
-var _networth_label: Label
-var _day_label: Label
-
-# 뷰 컨테이너
+# 동적 생성되는 뷰
 var _market_view: VBoxContainer
 var _autotrade_view: VBoxContainer
 var _life_view: VBoxContainer
 var _current_view: String = "시장"
 
-# 시장 뷰
+# 시장 뷰 내부
 var _stock_scroll: ScrollContainer
 var _stock_list: VBoxContainer
 var _trade_panel: PanelContainer
@@ -50,17 +48,21 @@ var _trade_qty_edit: SpinBox
 var _trade_total_label: Label
 var _trade_holding_label: Label
 
-# 자동매매 뷰
+# 자동매매
 var _autotrade_slots: Array = []
 
-# 라이프 뷰
+# 라이프
 var _life_housing_container: VBoxContainer
 var _life_vehicle_container: VBoxContainer
 
 
 # ═══════════════════════════════════════════════
 func _ready() -> void:
-	_build_layout()
+	_init_static_ui()
+	_build_market_view()
+	_build_autotrade_view()
+	_build_life_view()
+	_show_view("시장")
 	_refresh_all()
 	_connect_signals()
 
@@ -73,6 +75,7 @@ func _connect_signals() -> void:
 	GameManager.salary_paid.connect(_on_salary_paid)
 	MarketSim.market_tick.connect(_on_market_tick)
 	AutoTradeManager.auto_trade_executed.connect(_on_auto_trade_executed)
+	_advance_btn.pressed.connect(_on_advance_day)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -86,130 +89,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 # ═══════════════════════════════════════════════
-#   레이아웃
+#   정적 UI 초기화 (씬에서 이미 생성된 노드에 이벤트 연결)
 # ═══════════════════════════════════════════════
 
-func _build_layout() -> void:
-	var bg := ColorRect.new()
-	bg.color = COL_BG
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-
-	var root := VBoxContainer.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.offset_left = 12
-	root.offset_top = 8
-	root.offset_right = -12
-	root.offset_bottom = -8
-	root.add_theme_constant_override("separation", 6)
-	add_child(root)
-
-	root.add_child(_build_top_bar())
-	root.add_child(_build_view_tabs())
-	root.add_child(_build_cat_tabs())
-
-	# 콘텐츠 영역
-	_content = VBoxContainer.new()
-	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_content.add_theme_constant_override("separation", 6)
-	root.add_child(_content)
-
-	# 3개 뷰 빌드
-	_build_market_view()
-	_build_autotrade_view()
-	_build_life_view()
-
-	_show_view("시장")
-
-	# 토스트
-	_toast_label = Label.new()
-	_toast_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_toast_label.offset_top = 70
-	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_toast_label.add_theme_font_size_override("font_size", 18)
-	_toast_label.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	_toast_label.visible = false
-	_toast_label.z_index = 100
-	add_child(_toast_label)
-
-
-func _build_top_bar() -> HBoxContainer:
-	_top_bar = HBoxContainer.new()
-	_top_bar.add_theme_constant_override("separation", 20)
-
-	# 캐릭터
-	var char_box := VBoxContainer.new()
-	char_box.add_theme_constant_override("separation", 1)
-	var name_label := Label.new()
-	name_label.text = "  %s · %d대" % [GameManager.player["name"], GameManager.player["generation"]]
-	name_label.add_theme_font_size_override("font_size", 15)
-	name_label.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	char_box.add_child(name_label)
-	var rank_label := Label.new()
-	rank_label.text = "  " + GameManager.get_rank_name()
-	rank_label.add_theme_font_size_override("font_size", 12)
-	rank_label.add_theme_color_override("font_color", COL_ACCENT)
-	rank_label.name = "RankLabel"
-	char_box.add_child(rank_label)
-	_top_bar.add_child(char_box)
-
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_top_bar.add_child(spacer)
-
-	# 현금
-	_top_bar.add_child(_stat_box("현금", _fmt_won(GameManager.get_cash()), COL_UP, "cash"))
-	# 순자산
-	_top_bar.add_child(_stat_box("순자산", _fmt_won(GameManager.get_net_worth()), COL_ACCENT, "networth"))
-
-	# 일차
-	var day_box := VBoxContainer.new()
-	day_box.add_theme_constant_override("separation", 1)
-	var d1 := Label.new()
-	d1.text = "진행일"
-	d1.add_theme_font_size_override("font_size", 11)
-	d1.add_theme_color_override("font_color", COL_TEXT_DIM)
-	day_box.add_child(d1)
-	_day_label = Label.new()
+func _init_static_ui() -> void:
+	_rank_label.text = "  " + GameManager.get_rank_name()
 	_day_label.text = "%d일차" % GameManager.player["day"]
-	_day_label.add_theme_font_size_override("font_size", 15)
-	_day_label.add_theme_color_override("font_color", COL_TEXT)
-	day_box.add_child(_day_label)
-	_top_bar.add_child(day_box)
 
-	# 하루 경과 버튼
-	var advance_btn := Button.new()
-	advance_btn.text = "▶ 하루 경과"
-	advance_btn.custom_minimum_size = Vector2(100, 40)
-	advance_btn.add_theme_font_size_override("font_size", 14)
-	advance_btn.add_theme_color_override("font_color", COL_GOLD)
-	advance_btn.add_theme_stylebox_override("normal", _style_flat(Color(0.15, 0.12, 0.05, 1), 6))
-	advance_btn.add_theme_stylebox_override("hover", _style_flat(Color(0.20, 0.16, 0.06, 1), 6))
-	advance_btn.pressed.connect(_on_advance_day)
-	advance_btn.name = "AdvanceButton"
-	_top_bar.add_child(advance_btn)
-
-	# 저장
-	var save_btn := Button.new()
-	save_btn.text = "저장"
-	save_btn.custom_minimum_size = Vector2(60, 40)
-	save_btn.pressed.connect(_on_save)
-	_top_bar.add_child(save_btn)
-
-	# 메뉴
-	var menu_btn := Button.new()
-	menu_btn.text = "메뉴"
-	menu_btn.custom_minimum_size = Vector2(60, 40)
-	menu_btn.pressed.connect(_on_menu)
-	_top_bar.add_child(menu_btn)
-
-	return _top_bar
-
-
-func _build_view_tabs() -> HBoxContainer:
-	_view_tab_bar = HBoxContainer.new()
-	_view_tab_bar.add_theme_constant_override("separation", 4)
-
+	# View 탭 버튼들 생성
 	for tab_name in VIEW_TABS:
 		var btn := Button.new()
 		btn.text = tab_name
@@ -218,26 +105,20 @@ func _build_view_tabs() -> HBoxContainer:
 		btn.set_meta("view", tab_name)
 		btn.pressed.connect(_on_view_tab_pressed.bind(tab_name))
 		_update_view_tab_style(btn, tab_name == VIEW_TABS[0])
-		_view_tab_bar.add_child(btn)
+		_view_tabs.add_child(btn)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_view_tab_bar.add_child(spacer)
+	_view_tabs.add_child(spacer)
 
 	var phase_label := Label.new()
 	phase_label.name = "PhaseLabel"
 	phase_label.text = "시장: 중립"
 	phase_label.add_theme_font_size_override("font_size", 13)
 	phase_label.add_theme_color_override("font_color", COL_TEXT_DIM)
-	_view_tab_bar.add_child(phase_label)
+	_view_tabs.add_child(phase_label)
 
-	return _view_tab_bar
-
-
-func _build_cat_tabs() -> HBoxContainer:
-	_cat_tab_bar = HBoxContainer.new()
-	_cat_tab_bar.add_theme_constant_override("separation", 4)
-
+	# 카테고리 탭 버튼들
 	for cat in CATEGORY_FILTERS:
 		var btn := Button.new()
 		btn.text = cat
@@ -246,9 +127,13 @@ func _build_cat_tabs() -> HBoxContainer:
 		btn.set_meta("category", cat)
 		btn.pressed.connect(_on_cat_pressed.bind(cat))
 		_update_cat_style(btn, cat == CATEGORY_FILTERS[0])
-		_cat_tab_bar.add_child(btn)
+		_cat_tabs.add_child(btn)
 
-	return _cat_tab_bar
+	# 저장/메뉴 버튼
+	var save_btn := _content.get_parent().get_node("TopBar/SaveButton") as Button
+	save_btn.pressed.connect(_on_save)
+	var menu_btn := _content.get_parent().get_node("TopBar/MenuButton") as Button
+	menu_btn.pressed.connect(_on_menu)
 
 
 # ═══════════════════════════════════════════════
@@ -261,10 +146,9 @@ func _build_market_view() -> void:
 	_market_view.visible = false
 	_content.add_child(_market_view)
 
-	# 종목 스크롤
 	_stock_scroll = ScrollContainer.new()
 	_stock_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_stock_scroll.add_theme_stylebox_override("panel", _style_flat(COL_PANEL, 0))
+	_stock_scroll.add_theme_stylebox_override("panel", _flat(COL_PANEL, 0))
 	_market_view.add_child(_stock_scroll)
 
 	_stock_list = VBoxContainer.new()
@@ -272,50 +156,50 @@ func _build_market_view() -> void:
 	_stock_list.add_theme_constant_override("separation", 2)
 	_stock_scroll.add_child(_stock_list)
 
-	# 매매 패널
+	_build_trade_panel()
+	_populate_stock_list()
+
+
+func _build_trade_panel() -> void:
 	_trade_panel = PanelContainer.new()
-	_trade_panel.add_theme_stylebox_override("panel", _style_flat(COL_PANEL_LIGHT, 6))
+	_trade_panel.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 6))
 	_trade_panel.custom_minimum_size = Vector2(0, 90)
 	_trade_panel.visible = false
 	_market_view.add_child(_trade_panel)
 
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 16)
-	hbox.offset_left = 16
-	hbox.offset_top = 8
-	hbox.offset_right = -16
-	hbox.offset_bottom = -8
 	_trade_panel.add_child(hbox)
 
-	var info_box := VBoxContainer.new()
-	info_box.add_theme_constant_override("separation", 3)
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 3)
 	_trade_stock_name = Label.new()
 	_trade_stock_name.add_theme_font_size_override("font_size", 18)
 	_trade_stock_name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	info_box.add_child(_trade_stock_name)
+	info.add_child(_trade_stock_name)
 	_trade_price_label = Label.new()
 	_trade_price_label.add_theme_font_size_override("font_size", 14)
-	info_box.add_child(_trade_price_label)
+	info.add_child(_trade_price_label)
 	_trade_holding_label = Label.new()
 	_trade_holding_label.add_theme_font_size_override("font_size", 12)
 	_trade_holding_label.add_theme_color_override("font_color", COL_TEXT_DIM)
-	info_box.add_child(_trade_holding_label)
-	hbox.add_child(info_box)
+	info.add_child(_trade_holding_label)
+	hbox.add_child(info)
 
-	var spacer2 := Control.new()
-	spacer2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(spacer2)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(sp)
 
-	var action_box := HBoxContainer.new()
-	action_box.add_theme_constant_override("separation", 8)
-	action_box.alignment = BoxContainer.ALIGNMENT_END
+	var act := HBoxContainer.new()
+	act.add_theme_constant_override("separation", 8)
+	act.alignment = BoxContainer.ALIGNMENT_END
 
-	var qty_label := Label.new()
-	qty_label.text = "수량"
-	qty_label.add_theme_font_size_override("font_size", 13)
-	qty_label.add_theme_color_override("font_color", COL_TEXT_DIM)
-	qty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	action_box.add_child(qty_label)
+	var ql := Label.new()
+	ql.text = "수량"
+	ql.add_theme_font_size_override("font_size", 13)
+	ql.add_theme_color_override("font_color", COL_TEXT_DIM)
+	ql.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	act.add_child(ql)
 
 	_trade_qty_edit = SpinBox.new()
 	_trade_qty_edit.min_value = 1
@@ -323,42 +207,39 @@ func _build_market_view() -> void:
 	_trade_qty_edit.value = 1
 	_trade_qty_edit.custom_minimum_size = Vector2(100, 36)
 	_trade_qty_edit.value_changed.connect(_on_qty_changed)
-	action_box.add_child(_trade_qty_edit)
+	act.add_child(_trade_qty_edit)
 
 	_trade_total_label = Label.new()
 	_trade_total_label.text = "0원"
 	_trade_total_label.add_theme_font_size_override("font_size", 14)
-	_trade_total_label.add_theme_color_override("font_color", COL_TEXT)
 	_trade_total_label.custom_minimum_size = Vector2(130, 0)
 	_trade_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_trade_total_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	action_box.add_child(_trade_total_label)
+	act.add_child(_trade_total_label)
 
-	var buy_btn := Button.new()
-	buy_btn.text = "매수"
-	buy_btn.custom_minimum_size = Vector2(70, 36)
-	buy_btn.add_theme_font_size_override("font_size", 15)
-	buy_btn.add_theme_color_override("font_color", COL_UP)
-	buy_btn.pressed.connect(_on_buy)
-	action_box.add_child(buy_btn)
+	var buy := Button.new()
+	buy.text = "매수"
+	buy.custom_minimum_size = Vector2(70, 36)
+	buy.add_theme_font_size_override("font_size", 15)
+	buy.add_theme_color_override("font_color", COL_UP)
+	buy.pressed.connect(_on_buy)
+	act.add_child(buy)
 
-	var sell_btn := Button.new()
-	sell_btn.text = "매도"
-	sell_btn.custom_minimum_size = Vector2(70, 36)
-	sell_btn.add_theme_font_size_override("font_size", 15)
-	sell_btn.add_theme_color_override("font_color", COL_DOWN)
-	sell_btn.pressed.connect(_on_sell)
-	action_box.add_child(sell_btn)
+	var sell := Button.new()
+	sell.text = "매도"
+	sell.custom_minimum_size = Vector2(70, 36)
+	sell.add_theme_font_size_override("font_size", 15)
+	sell.add_theme_color_override("font_color", COL_DOWN)
+	sell.pressed.connect(_on_sell)
+	act.add_child(sell)
 
-	var close_btn := Button.new()
-	close_btn.text = "x"
-	close_btn.custom_minimum_size = Vector2(36, 36)
-	close_btn.pressed.connect(_close_trade_panel)
-	action_box.add_child(close_btn)
+	var close := Button.new()
+	close.text = "x"
+	close.custom_minimum_size = Vector2(36, 36)
+	close.pressed.connect(_close_trade_panel)
+	act.add_child(close)
 
-	hbox.add_child(action_box)
-
-	_populate_stock_list()
+	hbox.add_child(act)
 
 
 func _populate_stock_list() -> void:
@@ -376,46 +257,37 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	btn.custom_minimum_size = Vector2(0, 56)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.add_theme_font_size_override("font_size", 14)
-	btn.add_theme_stylebox_override("normal", _style_flat(COL_PANEL, 4))
-	btn.add_theme_stylebox_override("hover", _style_flat(COL_PANEL_LIGHT, 4))
-	btn.add_theme_stylebox_override("pressed", _style_flat(COL_PANEL_LIGHT, 4))
-	btn.set_meta("stock_id", stock["id"])
+	btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+	btn.add_theme_stylebox_override("hover", _flat(COL_PANEL_LIGHT, 4))
 	btn.pressed.connect(_on_stock_clicked.bind(stock["id"]))
 
 	var hbox := HBoxContainer.new()
-	hbox.offset_left = 12
-	hbox.offset_top = 4
-	hbox.offset_right = -12
-	hbox.offset_bottom = -4
 	hbox.add_theme_constant_override("separation", 10)
 	btn.add_child(hbox)
 
-	# 이름 + 티커
-	var name_box := VBoxContainer.new()
-	name_box.add_theme_constant_override("separation", 1)
+	var nb := VBoxContainer.new()
+	nb.add_theme_constant_override("separation", 1)
 	var name := Label.new()
 	name.text = stock["name"]
 	name.add_theme_font_size_override("font_size", 15)
 	name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	name_box.add_child(name)
+	nb.add_child(name)
 	var meta := Label.new()
 	meta.text = "%s · %s" % [stock.get("ticker", ""), stock.get("sector", "")]
 	meta.add_theme_font_size_override("font_size", 11)
 	meta.add_theme_color_override("font_color", COL_TEXT_DIM)
-	name_box.add_child(meta)
-	hbox.add_child(name_box)
+	nb.add_child(meta)
+	hbox.add_child(nb)
 
-	# 카테고리 태그
-	var cat_label := Label.new()
-	cat_label.text = _cat_tag(stock["category"])
-	cat_label.add_theme_font_size_override("font_size", 11)
-	cat_label.add_theme_color_override("font_color", _cat_color(stock["category"]))
-	cat_label.custom_minimum_size = Vector2(35, 0)
-	cat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cat_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(cat_label)
+	var cat := Label.new()
+	cat.text = _cat_tag(stock["category"])
+	cat.add_theme_font_size_override("font_size", 11)
+	cat.add_theme_color_override("font_color", _cat_color(stock["category"]))
+	cat.custom_minimum_size = Vector2(35, 0)
+	cat.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	cat.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hbox.add_child(cat)
 
-	# 스파크라인
 	var spark_script := load("res://scripts/Sparkline.gd")
 	var spark := Control.new()
 	spark.set_script(spark_script)
@@ -424,41 +296,38 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	spark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hbox.add_child(spark)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(spacer)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(sp)
 
-	# 보유 수량
-	var hold_label := Label.new()
-	hold_label.name = "HoldLabel"
-	hold_label.add_theme_font_size_override("font_size", 12)
-	hold_label.add_theme_color_override("font_color", COL_TEXT_DIM)
-	hold_label.custom_minimum_size = Vector2(70, 0)
-	hold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	hold_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(hold_label)
+	var hl := Label.new()
+	hl.name = "HoldLabel"
+	hl.add_theme_font_size_override("font_size", 12)
+	hl.add_theme_color_override("font_color", COL_TEXT_DIM)
+	hl.custom_minimum_size = Vector2(70, 0)
+	hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	hl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hbox.add_child(hl)
 
-	# 가격
-	var price := Label.new()
-	price.name = "PriceLabel"
-	price.text = _fmt_price(stock["price"])
-	price.add_theme_font_size_override("font_size", 15)
-	price.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	price.custom_minimum_size = Vector2(120, 0)
-	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(price)
+	var pl := Label.new()
+	pl.name = "PriceLabel"
+	pl.text = _fmt_price(stock["price"])
+	pl.add_theme_font_size_override("font_size", 15)
+	pl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	pl.custom_minimum_size = Vector2(120, 0)
+	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hbox.add_child(pl)
 
-	# 등락률
-	var change := Label.new()
-	change.name = "ChangeLabel"
-	change.text = _fmt_change(stock.get("change_pct", 0.0))
-	change.add_theme_font_size_override("font_size", 14)
-	change.add_theme_color_override("font_color", _change_color(stock.get("change_pct", 0.0)))
-	change.custom_minimum_size = Vector2(90, 0)
-	change.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	change.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(change)
+	var cl := Label.new()
+	cl.name = "ChangeLabel"
+	cl.text = _fmt_change(stock.get("change_pct", 0.0))
+	cl.add_theme_font_size_override("font_size", 14)
+	cl.add_theme_color_override("font_color", _chg_color(stock.get("change_pct", 0.0)))
+	cl.custom_minimum_size = Vector2(90, 0)
+	cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	cl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hbox.add_child(cl)
 
 	return btn
 
@@ -473,118 +342,95 @@ func _build_autotrade_view() -> void:
 	_autotrade_view.visible = false
 	_content.add_child(_autotrade_view)
 
-	# 헤더
-	var header := Label.new()
-	header.text = "  자동매매 슬롯 — 조건을 설정하면 자동으로 거래합니다 (오프라인에도 실행)"
-	header.add_theme_font_size_override("font_size", 13)
-	header.add_theme_color_override("font_color", COL_TEXT_DIM)
-	_autotrade_view.add_child(header)
+	var hdr := Label.new()
+	hdr.text = "  자동매매 슬롯 — 조건 설정 시 자동 거래 (오프라인에도 실행)"
+	hdr.add_theme_font_size_override("font_size", 13)
+	hdr.add_theme_color_override("font_color", COL_TEXT_DIM)
+	_autotrade_view.add_child(hdr)
 
 	_autotrade_slots.clear()
 	for i in AutoTradeManager.MAX_SLOTS:
-		var slot_ui := _create_autotrade_slot(i)
-		_autotrade_view.add_child(slot_ui)
-		_autotrade_slots.append(slot_ui)
+		var slot := _create_at_slot(i)
+		_autotrade_view.add_child(slot)
+		_autotrade_slots.append(slot)
+	_refresh_at_view()
 
-	_refresh_autotrade_view()
 
-
-func _create_autotrade_slot(index: int) -> PanelContainer:
+func _create_at_slot(index: int) -> PanelContainer:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", _style_flat(COL_PANEL, 6))
+	panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 6))
 	panel.custom_minimum_size = Vector2(0, 70)
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 4)
 	panel.add_child(outer)
 
-	# 슬롯 헤더 (번호 + ON/OFF)
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 10)
+	var hdr := HBoxContainer.new()
+	hdr.add_theme_constant_override("separation", 10)
+	var num := Label.new()
+	num.text = "  슬롯 %d" % (index + 1)
+	num.add_theme_font_size_override("font_size", 14)
+	num.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	hdr.add_child(num)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hdr.add_child(sp)
+	var tog := Button.new()
+	tog.text = "OFF"
+	tog.custom_minimum_size = Vector2(60, 28)
+	tog.name = "ToggleButton"
+	tog.pressed.connect(_on_at_toggle.bind(index))
+	hdr.add_child(tog)
+	outer.add_child(hdr)
 
-	var slot_num := Label.new()
-	slot_num.text = "  슬롯 %d" % (index + 1)
-	slot_num.add_theme_font_size_override("font_size", 14)
-	slot_num.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	header.add_child(slot_num)
+	var cfg := HBoxContainer.new()
+	cfg.add_theme_constant_override("separation", 8)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(spacer)
-
-	var toggle := Button.new()
-	toggle.text = "OFF"
-	toggle.custom_minimum_size = Vector2(60, 28)
-	toggle.add_theme_font_size_override("font_size", 13)
-	toggle.set_meta("slot_index", index)
-	toggle.pressed.connect(_on_autotrade_toggle.bind(index))
-	toggle.name = "ToggleButton"
-	header.add_child(toggle)
-
-	outer.add_child(header)
-
-	# 설정 행
-	var config_row := HBoxContainer.new()
-	config_row.add_theme_constant_override("separation", 8)
-	config_row.offset_left = 16
-	config_row.offset_right = -16
-
-	# 종목 선택
-	var stock_opts := OptionButton.new()
-	stock_opts.add_item("종목 선택", 0)
+	var stock_opt := OptionButton.new()
+	stock_opt.add_item("종목 선택", 0)
 	for s in MarketSim.get_all_stocks():
-		stock_opts.add_item("%s (%s)" % [s["name"], s["ticker"]], 0)
-	stock_opts.set_meta("slot_index", index)
-	stock_opts.custom_minimum_size = Vector2(160, 30)
-	stock_opts.item_selected.connect(_on_autotrade_stock_changed.bind(index))
-	stock_opts.name = "StockOption"
-	config_row.add_child(stock_opts)
+		stock_opt.add_item("%s (%s)" % [s["name"], s["ticker"]])
+	stock_opt.name = "StockOption"
+	stock_opt.custom_minimum_size = Vector2(160, 30)
+	stock_opt.item_selected.connect(_on_at_stock.bind(index))
+	cfg.add_child(stock_opt)
 
-	# 조건 타입
-	var cond_opts := OptionButton.new()
+	var cond_opt := OptionButton.new()
 	for key in AutoTradeManager.CONDITION_TYPES:
-		cond_opts.add_item(AutoTradeManager.CONDITION_TYPES[key])
-	cond_opts.set_meta("slot_index", index)
-	cond_opts.custom_minimum_size = Vector2(150, 30)
-	cond_opts.item_selected.connect(_on_autotrade_cond_changed.bind(index))
-	cond_opts.name = "CondOption"
-	config_row.add_child(cond_opts)
+		cond_opt.add_item(AutoTradeManager.CONDITION_TYPES[key])
+	cond_opt.name = "CondOption"
+	cond_opt.custom_minimum_size = Vector2(150, 30)
+	cond_opt.item_selected.connect(_on_at_cond.bind(index))
+	cfg.add_child(cond_opt)
 
-	# 조건값
-	var cond_val := SpinBox.new()
-	cond_val.min_value = 0
-	cond_val.max_value = 999999999
-	cond_val.step = 1000
-	cond_val.value = 50000
-	cond_val.custom_minimum_size = Vector2(120, 30)
-	cond_val.set_meta("slot_index", index)
-	cond_val.value_changed.connect(_on_autotrade_val_changed.bind(index))
-	cond_val.name = "CondValue"
-	config_row.add_child(cond_val)
+	var cv := SpinBox.new()
+	cv.min_value = 0
+	cv.max_value = 999999999
+	cv.step = 1000
+	cv.value = 50000
+	cv.name = "CondValue"
+	cv.custom_minimum_size = Vector2(120, 30)
+	cv.value_changed.connect(_on_at_val.bind(index))
+	cfg.add_child(cv)
 
-	# 매수/매도
-	var action_opts := OptionButton.new()
-	action_opts.add_item("매수")
-	action_opts.add_item("매도")
-	action_opts.set_meta("slot_index", index)
-	action_opts.custom_minimum_size = Vector2(70, 30)
-	action_opts.item_selected.connect(_on_autotrade_action_changed.bind(index))
-	action_opts.name = "ActionOption"
-	config_row.add_child(action_opts)
+	var act_opt := OptionButton.new()
+	act_opt.add_item("매수")
+	act_opt.add_item("매도")
+	act_opt.name = "ActionOption"
+	act_opt.custom_minimum_size = Vector2(70, 30)
+	act_opt.item_selected.connect(_on_at_action.bind(index))
+	cfg.add_child(act_opt)
 
-	# 수량
 	var qty := SpinBox.new()
 	qty.min_value = 1
 	qty.max_value = 100000
 	qty.value = 1
-	qty.custom_minimum_size = Vector2(80, 30)
-	qty.set_meta("slot_index", index)
-	qty.value_changed.connect(_on_autotrade_qty_changed.bind(index))
 	qty.name = "QtyValue"
-	config_row.add_child(qty)
+	qty.custom_minimum_size = Vector2(80, 30)
+	qty.value_changed.connect(_on_at_qty.bind(index))
+	cfg.add_child(qty)
 
-	outer.add_child(config_row)
+	outer.add_child(cfg)
 	return panel
 
 
@@ -600,7 +446,6 @@ func _build_life_view() -> void:
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.add_theme_stylebox_override("panel", _style_flat(COL_PANEL, 0))
 	_life_view.add_child(scroll)
 
 	var inner := VBoxContainer.new()
@@ -608,24 +453,21 @@ func _build_life_view() -> void:
 	inner.add_theme_constant_override("separation", 6)
 	scroll.add_child(inner)
 
-	# 주거 섹션
-	var house_header := Label.new()
-	house_header.text = "  주거"
-	house_header.add_theme_font_size_override("font_size", 18)
-	house_header.add_theme_color_override("font_color", COL_ACCENT)
-	inner.add_child(house_header)
+	var hh := Label.new()
+	hh.text = "  주거"
+	hh.add_theme_font_size_override("font_size", 18)
+	hh.add_theme_color_override("font_color", COL_ACCENT)
+	inner.add_child(hh)
 
 	_life_housing_container = VBoxContainer.new()
 	_life_housing_container.add_theme_constant_override("separation", 3)
 	inner.add_child(_life_housing_container)
 
-	# 차량 섹션
-	var veh_header := Label.new()
-	veh_header.text = "  차량"
-	veh_header.add_theme_font_size_override("font_size", 18)
-	veh_header.add_theme_color_override("font_color", COL_ACCENT)
-	inner.add_child(veh_header)
-	inner.add_child(_spacer(6))
+	var vh := Label.new()
+	vh.text = "  차량"
+	vh.add_theme_font_size_override("font_size", 18)
+	vh.add_theme_color_override("font_color", COL_ACCENT)
+	inner.add_child(vh)
 
 	_life_vehicle_container = VBoxContainer.new()
 	_life_vehicle_container.add_theme_constant_override("separation", 3)
@@ -635,107 +477,94 @@ func _build_life_view() -> void:
 
 
 func _refresh_life_view() -> void:
-	# 주거
-	for child in _life_housing_container.get_children():
-		child.queue_free()
-	var current_house_id: String = GameManager.player["house"]
+	for c in _life_housing_container.get_children():
+		c.queue_free()
+	var cur_house: String = GameManager.player["house"]
 	for i in range(GameManager.get_housing_list().size()):
 		var h: Dictionary = GameManager.get_housing_list()[i]
-		var is_current := h["id"] == current_house_id
-		var is_locked := i > 0 and GameManager.get_housing_list()[i - 1]["id"] != current_house_id and not is_current
-		var row := _create_life_row(h, "house", is_current, is_locked, i)
-		_life_housing_container.add_child(row)
+		var is_cur: bool = h["id"] == cur_house
+		var locked: bool = i > 0 and GameManager.get_housing_list()[i - 1]["id"] != cur_house and not is_cur
+		_life_housing_container.add_child(_life_row(h, "house", is_cur, locked, i))
 
-	# 차량
-	for child in _life_vehicle_container.get_children():
-		child.queue_free()
-	var current_veh_id: String = GameManager.player["vehicle"]
+	for c in _life_vehicle_container.get_children():
+		c.queue_free()
+	var cur_veh: String = GameManager.player["vehicle"]
 	for i in range(GameManager.get_vehicle_list().size()):
 		var v: Dictionary = GameManager.get_vehicle_list()[i]
-		var is_current := v["id"] == current_veh_id
-		var is_locked := i > 0 and GameManager.get_vehicle_list()[i - 1]["id"] != current_veh_id and not is_current
-		var row := _create_life_row(v, "vehicle", is_current, is_locked, i)
-		_life_vehicle_container.add_child(row)
+		var is_cur: bool = v["id"] == cur_veh
+		var locked: bool = i > 0 and GameManager.get_vehicle_list()[i - 1]["id"] != cur_veh and not is_cur
+		_life_vehicle_container.add_child(_life_row(v, "vehicle", is_cur, locked, i))
 
 
-func _create_life_row(item: Dictionary, type: String, is_current: bool, is_locked: bool, index: int) -> Control:
+func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx: int) -> Control:
 	var btn := Button.new()
 	btn.custom_minimum_size = Vector2(0, 50)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.add_theme_font_size_override("font_size", 14)
 
-	if is_current:
-		btn.add_theme_stylebox_override("normal", _style_flat(Color(0.10, 0.15, 0.10, 1), 4))
+	if is_cur:
+		btn.add_theme_stylebox_override("normal", _flat(Color(0.10, 0.15, 0.10, 1), 4))
 		btn.add_theme_color_override("font_color", COL_UP)
-	elif is_locked:
-		btn.add_theme_stylebox_override("normal", _style_flat(Color(0.06, 0.06, 0.07, 1), 4))
+	elif locked:
+		btn.add_theme_stylebox_override("normal", _flat(Color(0.06, 0.06, 0.07, 1), 4))
 		btn.add_theme_color_override("font_color", COL_TEXT_DIM)
 		btn.disabled = true
 	else:
-		btn.add_theme_stylebox_override("normal", _style_flat(COL_PANEL, 4))
-		btn.add_theme_stylebox_override("hover", _style_flat(COL_PANEL_LIGHT, 4))
-		btn.add_theme_color_override("font_color", COL_TEXT)
+		btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+		btn.add_theme_stylebox_override("hover", _flat(COL_PANEL_LIGHT, 4))
 		btn.pressed.connect(_on_life_buy.bind(type, item["id"]))
 
 	var hbox := HBoxContainer.new()
-	hbox.offset_left = 12
-	hbox.offset_top = 4
-	hbox.offset_right = -12
-	hbox.offset_bottom = -4
 	hbox.add_theme_constant_override("separation", 12)
 	btn.add_child(hbox)
 
-	# 이름
 	var name := Label.new()
 	name.text = item["name"]
 	name.add_theme_font_size_override("font_size", 15)
-	if is_current:
+	if is_cur:
 		name.text += "  (현재)"
 		name.add_theme_color_override("font_color", COL_UP)
-	elif is_locked:
+	elif locked:
 		name.add_theme_color_override("font_color", COL_TEXT_DIM)
 	else:
 		name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 	name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(name)
 
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(spacer)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(sp)
 
-	# 보너스
 	var bonus := Label.new()
-	var bonus_text := ""
+	var bt := ""
 	if item.get("energy_bonus", 0) > 0:
-		bonus_text += "정보력 +%d  " % item["energy_bonus"]
+		bt += "정보력 +%d  " % item["energy_bonus"]
 	if item.get("happiness", 0) > 0:
-		bonus_text += "행복 +%d" % item["happiness"]
-	if bonus_text == "":
-		bonus_text = "보너스 없음"
-	bonus.text = bonus_text
+		bt += "행복 +%d" % item["happiness"]
+	if bt == "":
+		bt = "보너스 없음"
+	bonus.text = bt
 	bonus.add_theme_font_size_override("font_size", 12)
 	bonus.add_theme_color_override("font_color", COL_TEXT_DIM)
 	bonus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(bonus)
 
-	# 가격
 	var price := Label.new()
-	if is_current:
+	if is_cur:
 		price.text = "보유"
-	elif is_locked:
-		price.text = "잠금 (이전 단계 필요)"
+	elif locked:
+		price.text = "잠금"
 	elif item["price"] == 0:
-		price.text = "기본 제공"
+		price.text = "기본"
 	else:
 		price.text = _fmt_won(item["price"])
 	price.add_theme_font_size_override("font_size", 14)
 	price.custom_minimum_size = Vector2(160, 0)
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	if not is_current and not is_locked:
+	if not is_cur and not locked:
 		price.add_theme_color_override("font_color", COL_GOLD)
 	hbox.add_child(price)
-
 	return btn
 
 
@@ -748,24 +577,23 @@ func _show_view(view_name: String) -> void:
 	_market_view.visible = (view_name == "시장")
 	_autotrade_view.visible = (view_name == "자동매매")
 	_life_view.visible = (view_name == "라이프")
-	_cat_tab_bar.visible = (view_name == "시장")
-
-	for child in _view_tab_bar.get_children():
+	_cat_tabs.visible = (view_name == "시장")
+	for child in _view_tabs.get_children():
 		if child is Button and child.has_meta("view"):
 			_update_view_tab_style(child, child.get_meta("view") == view_name)
 
 
-func _on_view_tab_pressed(view_name: String) -> void:
-	_show_view(view_name)
+func _on_view_tab_pressed(vn: String) -> void:
+	_show_view(vn)
 
 
 func _update_view_tab_style(btn: Button, active: bool) -> void:
 	if active:
-		btn.add_theme_stylebox_override("normal", _style_flat(COL_ACCENT, 4))
+		btn.add_theme_stylebox_override("normal", _flat(COL_ACCENT, 4))
 		btn.add_theme_color_override("font_color", Color.WHITE)
 	else:
-		btn.add_theme_stylebox_override("normal", _style_flat(COL_PANEL, 4))
-		btn.add_theme_color_override("font_color", COL_TEXT)
+		btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+		btn.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85, 1))
 
 
 # ═══════════════════════════════════════════════
@@ -774,33 +602,33 @@ func _update_view_tab_style(btn: Button, active: bool) -> void:
 
 func _on_cat_pressed(cat: String) -> void:
 	_current_category = CATEGORY_MAP[cat]
-	for child in _cat_tab_bar.get_children():
+	for child in _cat_tabs.get_children():
 		if child is Button and child.has_meta("category"):
 			_update_cat_style(child, child.get_meta("category") == cat)
-	_apply_category_filter()
+	_apply_cat_filter()
 
 
 func _update_cat_style(btn: Button, active: bool) -> void:
 	if active:
-		btn.add_theme_stylebox_override("normal", _style_flat(COL_ACCENT, 4))
+		btn.add_theme_stylebox_override("normal", _flat(COL_ACCENT, 4))
 		btn.add_theme_color_override("font_color", Color.WHITE)
 	else:
-		btn.add_theme_stylebox_override("normal", _style_flat(COL_PANEL, 4))
-		btn.add_theme_color_override("font_color", COL_TEXT)
+		btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+		btn.add_theme_color_override("font_color", Color(0.82, 0.82, 0.85, 1))
 
 
-func _apply_category_filter() -> void:
-	for stock_id in _stock_rows:
-		var row: Control = _stock_rows[stock_id]
+func _apply_cat_filter() -> void:
+	for sid in _stock_rows:
+		var row: Control = _stock_rows[sid]
 		if _current_category == "":
 			row.visible = true
 		else:
-			var stock := MarketSim.get_stock(stock_id)
-			row.visible = stock.get("category") == _current_category
+			var s: Dictionary = MarketSim.get_stock(sid)
+			row.visible = s.get("category") == _current_category
 
 
-func _on_stock_clicked(stock_id: String) -> void:
-	_selected_stock = stock_id
+func _on_stock_clicked(sid: String) -> void:
+	_selected_stock = sid
 	_trade_panel.visible = true
 	_update_trade_panel()
 
@@ -813,16 +641,16 @@ func _close_trade_panel() -> void:
 func _update_trade_panel() -> void:
 	if _selected_stock == "":
 		return
-	var stock := MarketSim.get_stock(_selected_stock)
-	if stock.is_empty():
+	var s: Dictionary = MarketSim.get_stock(_selected_stock)
+	if s.is_empty():
 		return
-	_trade_stock_name.text = "%s (%s)" % [stock["name"], stock.get("ticker", "")]
-	_trade_price_label.text = _fmt_price(stock["price"]) + "  " + _fmt_change(stock.get("change_pct", 0.0))
-	_trade_price_label.add_theme_color_override("font_color", _change_color(stock.get("change_pct", 0.0)))
-	var qty := GameManager.get_holding_quantity(_selected_stock)
-	if qty > 0:
+	_trade_stock_name.text = "%s (%s)" % [s["name"], s.get("ticker", "")]
+	_trade_price_label.text = _fmt_price(s["price"]) + "  " + _fmt_change(s.get("change_pct", 0.0))
+	_trade_price_label.add_theme_color_override("font_color", _chg_color(s.get("change_pct", 0.0)))
+	var q: int = GameManager.get_holding_quantity(_selected_stock)
+	if q > 0:
 		var avg: float = GameManager.get_holding(_selected_stock)["avg_price"]
-		_trade_holding_label.text = "보유: %d주 | 평단가 %s" % [qty, _fmt_price(avg)]
+		_trade_holding_label.text = "보유: %d주 | 평단가 %s" % [q, _fmt_price(avg)]
 	else:
 		_trade_holding_label.text = "보유 없음"
 	_on_qty_changed(_trade_qty_edit.value)
@@ -831,60 +659,52 @@ func _update_trade_panel() -> void:
 func _on_qty_changed(value: float) -> void:
 	if _selected_stock == "":
 		return
-	var stock := MarketSim.get_stock(_selected_stock)
-	if stock.is_empty():
+	var s: Dictionary = MarketSim.get_stock(_selected_stock)
+	if s.is_empty():
 		return
-	var total := stock["price"] * int(value)
-	_trade_total_label.text = _fmt_won(total)
+	_trade_total_label.text = _fmt_won(s["price"] * int(value))
 
 
 func _on_buy() -> void:
 	if _selected_stock == "":
 		return
 	var qty := int(_trade_qty_edit.value)
-	var result := GameManager.buy_stock(_selected_stock, qty)
-	if result.get("success", false):
-		_show_toast("매수 완료: %d주 (%s)" % [qty, _fmt_won(result["cost"])])
+	var r := GameManager.buy_stock(_selected_stock, qty)
+	if r.get("success"):
+		_show_toast("매수 완료: %d주 (%s)" % [qty, _fmt_won(r["cost"])])
 		_update_trade_panel()
 	else:
-		_show_toast("실패: " + result.get("reason", ""))
+		_show_toast("실패: " + r.get("reason", ""))
 
 
 func _on_sell() -> void:
 	if _selected_stock == "":
 		return
 	var qty := int(_trade_qty_edit.value)
-	var result := GameManager.sell_stock(_selected_stock, qty)
-	if result.get("success", false):
-		var ptext := ""
-		if result.has("profit"):
-			var p: float = result["profit"]
-			if p >= 0:
-				ptext = " (수익 +%s)" % _fmt_won(p)
-			else:
-				ptext = " (손실 %s)" % _fmt_won(abs(p))
-		_show_toast("매도 완료: %d주%s" % [qty, ptext])
+	var r := GameManager.sell_stock(_selected_stock, qty)
+	if r.get("success"):
+		var pt := ""
+		if r.has("profit"):
+			var p: float = r["profit"]
+			pt = " (수익 +%s)" % _fmt_won(p) if p >= 0 else " (손실 %s)" % _fmt_won(abs(p))
+		_show_toast("매도 완료: %d주%s" % [qty, pt])
 		_update_trade_panel()
 	else:
-		_show_toast("실패: " + result.get("reason", ""))
+		_show_toast("실패: " + r.get("reason", ""))
 
 
 func _on_advance_day() -> void:
-	var result := GameManager.advance_day()
+	var r := GameManager.advance_day()
 	MarketSim.advance_day()
-
-	var msg := "%d일차 경과" % result["day"]
-	if result.get("salary", 0.0) > 0:
-		msg += " | 월급 +%s" % _fmt_won(result["salary"])
-	if result.get("rank_up", "") != "":
-		msg += " | 승진! → %s" % result["rank_up"]
-		var rl := _top_bar.get_node_or_null("RankLabel")
-		if rl is Label:
-			(rl as Label).text = "  " + GameManager.get_rank_name()
-	if result.has("bailout"):
-		msg += " | 파산방지 지원금 +%s" % _fmt_won(result["bailout"])
-
-	_day_label.text = "%d일차" % result["day"]
+	var msg := "%d일차" % r["day"]
+	if r.get("salary", 0.0) > 0:
+		msg += " | 월급 +%s" % _fmt_won(r["salary"])
+	if r.get("rank_up", "") != "":
+		msg += " | 승진! → %s" % r["rank_up"]
+		_rank_label.text = "  " + GameManager.get_rank_name()
+	if r.has("bailout"):
+		msg += " | 파산방지 +%s" % _fmt_won(r["bailout"])
+	_day_label.text = "%d일차" % r["day"]
 	_show_toast(msg)
 
 
@@ -897,9 +717,9 @@ func _on_menu() -> void:
 	get_tree().change_scene_to_file("res://scenes/boot.tscn")
 
 
-func _on_cash_changed(cash: float) -> void:
+func _on_cash_changed(c: float) -> void:
 	if _cash_label:
-		_cash_label.text = _fmt_won(cash)
+		_cash_label.text = _fmt_won(c)
 
 
 func _on_net_worth_changed(nw: float) -> void:
@@ -907,108 +727,99 @@ func _on_net_worth_changed(nw: float) -> void:
 		_networth_label.text = _fmt_won(nw)
 
 
-func _on_day_advanced(day: int) -> void:
-	_day_label.text = "%d일차" % day
+func _on_day_advanced(d: int) -> void:
+	_day_label.text = "%d일차" % d
 
 
-func _on_rank_up(new_rank: String) -> void:
-	var rl := _top_bar.get_node_or_null("RankLabel")
-	if rl is Label:
-		(rl as Label).text = "  " + new_rank
-	_show_toast("승진! → %s" % new_rank)
+func _on_rank_up(nr: String) -> void:
+	_rank_label.text = "  " + nr
+	_show_toast("승진! → %s" % nr)
 
 
-func _on_salary_paid(amount: float) -> void:
-	_show_toast("월급 지급: +%s" % _fmt_won(amount))
+func _on_salary_paid(a: float) -> void:
+	_show_toast("월급: +%s" % _fmt_won(a))
 
 
-func _on_auto_trade_executed(slot: Dictionary, result: Dictionary) -> void:
-	var stock := MarketSim.get_stock(slot["stock_id"])
-	var action_text := "매수" if slot["action"] == "buy" else "매도"
-	_show_toast("자동매매: %s %s %d주" % [stock.get("name", ""), action_text, slot["quantity"]])
+func _on_auto_trade_executed(slot: Dictionary, _r: Dictionary) -> void:
+	var s: Dictionary = MarketSim.get_stock(slot["stock_id"])
+	var act := "매수" if slot["action"] == "buy" else "매도"
+	_show_toast("자동매매: %s %s %d주" % [s.get("name", ""), act, slot["quantity"]])
 
 
-# ═══════════════════════════════════════════════
-#   자동매매 이벤트
-# ═══════════════════════════════════════════════
-
-func _on_autotrade_toggle(index: int) -> void:
-	AutoTradeManager.toggle_slot(index)
-	_refresh_autotrade_view()
+# 자동매매 이벤트
+func _on_at_toggle(i: int) -> void:
+	AutoTradeManager.toggle_slot(i)
+	_refresh_at_view()
 
 
-func _on_autotrade_stock_changed(index: int) -> void:
-	var panel: PanelContainer = _autotrade_slots[index]
-	var opt: OptionButton = panel.get_node("StockOption")
-	var sel := opt.selected
-	if sel == 0:
+func _on_at_stock(i: int) -> void:
+	var p: PanelContainer = _autotrade_slots[i]
+	var opt: OptionButton = p.find_child("StockOption", true, false)
+	if opt.selected == 0:
 		return
-	var stock := MarketSim.get_all_stocks()[sel - 1]
-	var slot := AutoTradeManager.get_slot(index)
-	slot["stock_id"] = stock["id"]
-	AutoTradeManager.set_slot(index, slot)
+	var s = MarketSim.get_all_stocks()[opt.selected - 1]
+	var slot: Dictionary = AutoTradeManager.get_slot(i)
+	slot["stock_id"] = s["id"]
+	AutoTradeManager.set_slot(i, slot)
 
 
-func _on_autotrade_cond_changed(index: int) -> void:
-	var panel: PanelContainer = _autotrade_slots[index]
-	var opt: OptionButton = panel.get_node("CondOption")
+func _on_at_cond(i: int) -> void:
+	var p: PanelContainer = _autotrade_slots[i]
+	var opt: OptionButton = p.find_child("CondOption", true, false)
 	var keys := AutoTradeManager.CONDITION_TYPES.keys()
-	var sel_key: String = keys[opt.selected]
-	var slot := AutoTradeManager.get_slot(index)
-	slot["condition_type"] = sel_key
-	AutoTradeManager.set_slot(index, slot)
+	var slot: Dictionary = AutoTradeManager.get_slot(i)
+	slot["condition_type"] = keys[opt.selected]
+	AutoTradeManager.set_slot(i, slot)
 
 
-func _on_autotrade_val_changed(value: float, index: int) -> void:
-	var slot := AutoTradeManager.get_slot(index)
-	slot["condition_value"] = value
-	AutoTradeManager.set_slot(index, slot)
+func _on_at_val(v: float, i: int) -> void:
+	var slot: Dictionary = AutoTradeManager.get_slot(i)
+	slot["condition_value"] = v
+	AutoTradeManager.set_slot(i, slot)
 
 
-func _on_autotrade_action_changed(index: int) -> void:
-	var panel: PanelContainer = _autotrade_slots[index]
-	var opt: OptionButton = panel.get_node("ActionOption")
-	var slot := AutoTradeManager.get_slot(index)
+func _on_at_action(i: int) -> void:
+	var p: PanelContainer = _autotrade_slots[i]
+	var opt: OptionButton = p.find_child("ActionOption", true, false)
+	var slot: Dictionary = AutoTradeManager.get_slot(i)
 	slot["action"] = "buy" if opt.selected == 0 else "sell"
-	AutoTradeManager.set_slot(index, slot)
+	AutoTradeManager.set_slot(i, slot)
 
 
-func _on_autotrade_qty_changed(value: float, index: int) -> void:
-	var slot := AutoTradeManager.get_slot(index)
-	slot["quantity"] = int(value)
-	AutoTradeManager.set_slot(index, slot)
+func _on_at_qty(v: float, i: int) -> void:
+	var slot: Dictionary = AutoTradeManager.get_slot(i)
+	slot["quantity"] = int(v)
+	AutoTradeManager.set_slot(i, slot)
 
 
-func _on_life_buy(type: String, item_id: String) -> void:
-	var result: Dictionary
+func _on_life_buy(type: String, id: String) -> void:
+	var r: Dictionary
 	if type == "house":
-		result = GameManager.buy_house(item_id)
+		r = GameManager.buy_house(id)
 	else:
-		result = GameManager.buy_vehicle(item_id)
-
-	if result.get("success", false):
-		var name_text: String = result.get(type, {}).get("name", "")
-		_show_toast("구매 완료: %s" % name_text)
+		r = GameManager.buy_vehicle(id)
+	if r.get("success"):
+		_show_toast("구매 완료: %s" % r.get(type, {}).get("name", ""))
 		_refresh_life_view()
 	else:
-		_show_toast("실패: " + result.get("reason", ""))
+		_show_toast("실패: " + r.get("reason", ""))
 
 
-func _refresh_autotrade_view() -> void:
+func _refresh_at_view() -> void:
 	for i in AutoTradeManager.MAX_SLOTS:
 		if i >= _autotrade_slots.size():
 			break
-		var panel: PanelContainer = _autotrade_slots[i]
-		var slot := AutoTradeManager.get_slot(i)
-		var toggle: Button = panel.get_node("ToggleButton")
+		var p: PanelContainer = _autotrade_slots[i]
+		var slot: Dictionary = AutoTradeManager.get_slot(i)
+		var tog: Button = p.find_child("ToggleButton", true, false)
 		if slot["active"]:
-			toggle.text = "ON"
-			toggle.add_theme_color_override("font_color", COL_UP)
-			toggle.add_theme_stylebox_override("normal", _style_flat(Color(0.10, 0.15, 0.10, 1), 4))
+			tog.text = "ON"
+			tog.add_theme_color_override("font_color", COL_UP)
+			tog.add_theme_stylebox_override("normal", _flat(Color(0.10, 0.15, 0.10, 1), 4))
 		else:
-			toggle.text = "OFF"
-			toggle.add_theme_color_override("font_color", COL_TEXT_DIM)
-			toggle.add_theme_stylebox_override("normal", _style_flat(COL_PANEL, 4))
+			tog.text = "OFF"
+			tog.add_theme_color_override("font_color", COL_TEXT_DIM)
+			tog.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
 
 
 # ═══════════════════════════════════════════════
@@ -1016,68 +827,61 @@ func _refresh_autotrade_view() -> void:
 # ═══════════════════════════════════════════════
 
 func _on_market_tick() -> void:
-	# 페이즈 표시
-	var phase_label := _view_tab_bar.get_node_or_null("PhaseLabel")
-	if phase_label is Label:
-		var cycle := MarketSim.market_cycle
-		if cycle > 0.3:
-			(phase_label as Label).text = "시장: 강세 ↑"
-			(phase_label as Label).add_theme_color_override("font_color", COL_UP)
-		elif cycle < -0.3:
-			(phase_label as Label).text = "시장: 약세 ↓"
-			(phase_label as Label).add_theme_color_override("font_color", COL_DOWN)
+	var pl := _view_tabs.get_node_or_null("PhaseLabel")
+	if pl is Label:
+		var c := MarketSim.market_cycle
+		if c > 0.3:
+			(pl as Label).text = "시장: 강세 ↑"
+			(pl as Label).add_theme_color_override("font_color", COL_UP)
+		elif c < -0.3:
+			(pl as Label).text = "시장: 약세 ↓"
+			(pl as Label).add_theme_color_override("font_color", COL_DOWN)
 		else:
-			(phase_label as Label).text = "시장: 중립"
-			(phase_label as Label).add_theme_color_override("font_color", COL_TEXT_DIM)
+			(pl as Label).text = "시장: 중립"
+			(pl as Label).add_theme_color_override("font_color", COL_TEXT_DIM)
 
-	# 행 업데이트
-	for stock_id in _stock_rows:
-		_update_stock_row(stock_id)
+	for sid in _stock_rows:
+		_update_stock_row(sid)
 
-	# 순자산 갱신
 	if _networth_label:
 		_networth_label.text = _fmt_won(GameManager.get_net_worth())
 
-	# 매매 패널
 	if _trade_panel.visible:
 		_update_trade_panel()
 
-	# 자동매매 체크
 	AutoTradeManager.check_and_execute()
 
 
-func _update_stock_row(stock_id: String) -> void:
-	var row: Control = _stock_rows.get(stock_id)
+func _update_stock_row(sid: String) -> void:
+	var row: Control = _stock_rows.get(sid)
 	if not row:
 		return
-	var stock := MarketSim.get_stock(stock_id)
-	if stock.is_empty():
+	var s: Dictionary = MarketSim.get_stock(sid)
+	if s.is_empty():
 		return
 
-	var price_label := row.get_node_or_null("PriceLabel")
-	if price_label is Label:
-		(price_label as Label).text = _fmt_price(stock["price"])
+	var pl := row.get_node_or_null("PriceLabel")
+	if pl is Label:
+		(pl as Label).text = _fmt_price(s["price"])
 
-	var change_label := row.get_node_or_null("ChangeLabel")
-	if change_label is Label:
-		var pct: float = stock.get("change_pct", 0.0)
-		(change_label as Label).text = _fmt_change(pct)
-		(change_label as Label).add_theme_color_override("font_color", _change_color(pct))
+	var cl := row.get_node_or_null("ChangeLabel")
+	if cl is Label:
+		var pct: float = s.get("change_pct", 0.0)
+		(cl as Label).text = _fmt_change(pct)
+		(cl as Label).add_theme_color_override("font_color", _chg_color(pct))
 
-	var hold_label := row.get_node_or_null("HoldLabel")
-	if hold_label is Label:
-		var qty := GameManager.get_holding_quantity(stock_id)
-		if qty > 0:
-			(hold_label as Label).text = "%d주" % qty
-			(hold_label as Label).add_theme_color_override("font_color", COL_ACCENT)
+	var hl := row.get_node_or_null("HoldLabel")
+	if hl is Label:
+		var q: int = GameManager.get_holding_quantity(sid)
+		if q > 0:
+			(hl as Label).text = "%d주" % q
+			(hl as Label).add_theme_color_override("font_color", COL_ACCENT)
 		else:
-			(hold_label as Label).text = ""
+			(hl as Label).text = ""
 
-	# 스파크라인 업데이트
 	var spark := row.get_node_or_null("Sparkline")
-	if spark and stock["history"].size() >= 2:
-		var is_up: bool = stock.get("change_pct", 0.0) >= 0
-		spark.set_data(stock["history"], is_up)
+	if spark and s["history"].size() >= 2:
+		spark.set_data(s["history"], s.get("change_pct", 0.0) >= 0)
 
 
 # ═══════════════════════════════════════════════
@@ -1090,91 +894,63 @@ func _refresh_all() -> void:
 
 
 func _show_toast(msg: String) -> void:
-	_toast_label.text = msg
-	_toast_label.visible = true
-	_toast_label.modulate.a = 1.0
+	_toast.text = msg
+	_toast.visible = true
+	_toast.modulate.a = 1.0
 	var tw := create_tween()
 	tw.tween_interval(2.0)
-	tw.tween_property(_toast_label, "modulate:a", 0.0, 0.5)
-	tw.tween_callback(func(): _toast_label.visible = false)
+	tw.tween_property(_toast, "modulate:a", 0.0, 0.5)
+	tw.tween_callback(func(): _toast.visible = false)
 
 
-func _stat_box(title: String, value: String, color: Color, meta: String) -> VBoxContainer:
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 1)
-	var t := Label.new()
-	t.text = title
-	t.add_theme_font_size_override("font_size", 11)
-	t.add_theme_color_override("font_color", COL_TEXT_DIM)
-	box.add_child(t)
-	var v := Label.new()
-	v.text = value
-	v.add_theme_font_size_override("font_size", 16)
-	v.add_theme_color_override("font_color", color)
-	box.add_child(v)
-	match meta:
-		"cash": _cash_label = v
-		"networth": _networth_label = v
-	return box
-
-
-func _cat_tag(cat: String) -> String:
-	match cat:
+func _cat_tag(c: String) -> String:
+	match c:
 		"korea": return "한국"
 		"usa": return "미국"
 		"coin": return "코인"
-		_: return cat
+		_: return c
 
 
-func _cat_color(cat: String) -> Color:
-	match cat:
+func _cat_color(c: String) -> Color:
+	match c:
 		"korea": return Color(0.35, 0.60, 0.90, 1)
 		"usa": return Color(0.75, 0.45, 0.85, 1)
 		"coin": return COL_GOLD
 		_: return COL_TEXT_DIM
 
 
-func _change_color(pct: float) -> Color:
-	if pct > 0.01:
-		return COL_UP
-	elif pct < -0.01:
-		return COL_DOWN
+func _chg_color(p: float) -> Color:
+	if p > 0.01: return COL_UP
+	if p < -0.01: return COL_DOWN
 	return COL_TEXT_DIM
 
 
-func _fmt_price(price: float) -> String:
-	if price >= 100_000_000:
-		return "%.2f억" % (price / 100_000_000)
-	return "%,.0f원" % price
+func _fmt_price(p: float) -> String:
+	if p >= 100_000_000:
+		return "%.2f억" % (p / 100_000_000)
+	return "%.0f" % int(p) + "원"
 
 
-func _fmt_won(amount: float) -> String:
-	var abs_amount := absf(amount)
-	if abs_amount >= 100_000_000:
-		return "%.2f억원" % (amount / 100_000_000)
-	elif abs_amount >= 10_000_000:
-		return "%.1f천만원" % (amount / 10_000_000)
-	return "%,.0f원" % amount
+func _fmt_won(a: float) -> String:
+	var ab := absf(a)
+	if ab >= 100_000_000:
+		return "%.2f억원" % (a / 100_000_000)
+	elif ab >= 10_000_000:
+		return "%.1f천만원" % (a / 10_000_000)
+	return "%.0f" % a + "원"
 
 
-func _fmt_change(pct: float) -> String:
-	if pct >= 0:
-		return "+%.2f%%" % pct
-	return "%.2f%%" % pct
+func _fmt_change(p: float) -> String:
+	var sign := "+" if p >= 0 else ""
+	return sign + "%.2f" % p + "%"
 
 
-func _style_flat(bg: Color, radius: int) -> StyleBoxFlat:
+func _flat(bg: Color, radius: int) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg
 	s.set_corner_radius_all(radius)
-	s.content_margin_left = 8
-	s.content_margin_right = 8
-	s.content_margin_top = 4
-	s.content_margin_bottom = 4
+	s.content_margin_left = 8.0
+	s.content_margin_right = 8.0
+	s.content_margin_top = 4.0
+	s.content_margin_bottom = 4.0
 	return s
-
-
-func _spacer(height: float) -> Control:
-	var c := Control.new()
-	c.custom_minimum_size = Vector2(0, height)
-	return c

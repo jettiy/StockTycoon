@@ -315,4 +315,4 @@ func _fail(reason: String) -> Dictionary:
 
 
 func _format_won(amount: float) -> String:
-	return "%,.0f" % amount
+	return "%.0f" % amount + "원"

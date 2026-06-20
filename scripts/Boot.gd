@@ -221,4 +221,4 @@ func _fmt_won(amount: float) -> String:
 		return "%.2f억원" % (amount / 100_000_000)
 	elif abs_amount >= 10_000_000:
 		return "%.1f천만원" % (amount / 10_000_000)
-	return "%,.0f원" % amount
+	return "%.0f" % amount + "원"

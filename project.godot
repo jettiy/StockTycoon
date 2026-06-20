@@ -34,6 +34,15 @@ ui_select={
 ]
 }
 
+[editor_plugins]
+
+enabled=PackedStringArray("easy_charts")
+
+[gui]
+
+theme/custom="res://assets/themes/dark_trading.tres"
+theme/custom_font=""
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"
