@@ -71,6 +71,15 @@ var _asset_subtab: String = "주거"
 var _asset_subtabs: HBoxContainer
 var _asset_housing_container: VBoxContainer
 var _asset_vehicle_container: VBoxContainer
+var _asset_detail_panel: PanelContainer
+var _asset_detail_icon: TextureRect
+var _asset_detail_name: Label
+var _asset_detail_desc: Label
+var _asset_detail_effects: Label
+var _asset_detail_price: Label
+var _asset_detail_buy_btn: Button
+var _selected_life_type: String = ""
+var _selected_life_id: String = ""
 
 # NPC 뷰
 var _npc_view: VBoxContainer
@@ -1028,7 +1037,8 @@ func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx:
 	else:
 		btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
 		btn.add_theme_stylebox_override("hover", _flat(COL_PANEL_LIGHT, 4))
-		btn.pressed.connect(_on_life_buy.bind(type, item["id"]))
+	# 클릭 시 상세 팝업 표시 (직접 구매 아님)
+	btn.pressed.connect(_on_life_selected.bind(type, item["id"]))
 
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 12)
@@ -1051,20 +1061,6 @@ func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(sp)
 
-	var bonus := Label.new()
-	var bt := ""
-	if item.get("energy_bonus", 0) > 0:
-		bt += "정보력 +%d  " % item["energy_bonus"]
-	if item.get("happiness", 0) > 0:
-		bt += "행복 +%d" % item["happiness"]
-	if bt == "":
-		bt = "보너스 없음"
-	bonus.text = bt
-	bonus.add_theme_font_size_override("font_size", 14)
-	bonus.add_theme_color_override("font_color", COL_TEXT_DIM)
-	bonus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hbox.add_child(bonus)
-
 	var price := Label.new()
 	if is_cur:
 		price.text = "보유"
@@ -1082,6 +1078,198 @@ func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx:
 		price.add_theme_color_override("font_color", COL_GOLD)
 	hbox.add_child(price)
 	return btn
+
+
+## 주거/차량 선택 — 상세 팝업 표시
+func _on_life_selected(type: String, item_id: String) -> void:
+	_selected_life_type = type
+	_selected_life_id = item_id
+	_show_life_detail_popup(type, item_id)
+
+
+## 주거/차량 상세 팝업
+func _show_life_detail_popup(type: String, item_id: String) -> void:
+	var item: Dictionary
+	if type == "house":
+		item = GameManager.get_current_house()
+		for h in GameManager.get_housing_list():
+			if h["id"] == item_id:
+				item = h
+				break
+	else:
+		for v in GameManager.get_vehicle_list():
+			if v["id"] == item_id:
+				item = v
+				break
+	if item.is_empty():
+		return
+
+	var is_cur: bool = false
+	if type == "house":
+		is_cur = (GameManager.player["house"] == item_id)
+	else:
+		is_cur = (GameManager.player["vehicle"] == item_id)
+
+	GameClockManager.pause_for_event()
+
+	# 오버레이
+	var overlay := ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.85)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 70
+	add_child(overlay)
+
+	# 팝업
+	var popup := PanelContainer.new()
+	popup.set_anchors_preset(Control.PRESET_CENTER)
+	popup.custom_minimum_size = Vector2(520, 380)
+	popup.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 8))
+	popup.z_index = 71
+	add_child(popup)
+
+	var main_hbox := HBoxContainer.new()
+	main_hbox.add_theme_constant_override("separation", 16)
+	main_hbox.offset_left = 20
+	main_hbox.offset_top = 20
+	main_hbox.offset_right = -20
+	main_hbox.offset_bottom = -20
+	popup.add_child(main_hbox)
+
+	# 좌측: 도트 이미지
+	var icon := _get_life_icon(type, item_id)
+	if icon:
+		var icon_rect := TextureRect.new()
+		icon_rect.texture = icon
+		icon_rect.custom_minimum_size = Vector2(128, 128)
+		icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		main_hbox.add_child(icon_rect)
+
+	# 우측: 정보 + 구매
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 6)
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main_hbox.add_child(content)
+
+	# 이름
+	var name_lbl := Label.new()
+	name_lbl.text = item.get("name", "")
+	name_lbl.add_theme_font_size_override("font_size", 20)
+	name_lbl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	content.add_child(name_lbl)
+
+	# 상태 표시
+	if is_cur:
+		var cur_lbl := Label.new()
+		cur_lbl.text = "현재 보유 중"
+		cur_lbl.add_theme_font_size_override("font_size", 15)
+		cur_lbl.add_theme_color_override("font_color", COL_UP)
+		content.add_child(cur_lbl)
+
+	# 가격
+	var price_lbl := Label.new()
+	if item.get("price", 0) == 0:
+		price_lbl.text = "가격: 기본 제공"
+	elif is_cur:
+		price_lbl.text = "가격: 구매 완료"
+	else:
+		price_lbl.text = "가격: " + _fmt_won(float(item["price"]))
+	price_lbl.add_theme_font_size_override("font_size", 16)
+	price_lbl.add_theme_color_override("font_color", COL_GOLD)
+	content.add_child(price_lbl)
+
+	# 효과
+	var effects_text := ""
+	if item.get("energy_bonus", 0) > 0:
+		effects_text += "정보력 +%d  " % item["energy_bonus"]
+	if item.get("happiness", 0) > 0:
+		effects_text += "행복 +%d  " % item["happiness"]
+	if item.get("rental_income_per_day", 0) > 0:
+		effects_text += "임대수익 %s/일  " % _fmt_won_short(float(item["rental_income_per_day"]))
+
+	var effects_lbl := Label.new()
+	if effects_text == "":
+		effects_lbl.text = "특수 효과 없음"
+		effects_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+	else:
+		effects_lbl.text = "효과: " + effects_text
+		effects_lbl.add_theme_color_override("font_color", COL_ACCENT)
+	effects_lbl.add_theme_font_size_override("font_size", 15)
+	content.add_child(effects_lbl)
+
+	# 빈 공간
+	var sp := Control.new()
+	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(sp)
+
+	# 버튼 행
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 8)
+	content.add_child(btn_row)
+
+	if not is_cur:
+		# 구매 버튼
+		var buy_btn := Button.new()
+		var price_val: float = float(item.get("price", 0))
+		buy_btn.text = "구매"
+		buy_btn.custom_minimum_size = Vector2(120, 42)
+		buy_btn.add_theme_font_size_override("font_size", 18)
+		buy_btn.add_theme_color_override("font_color", COL_UP)
+		if not GameManager.can_afford(price_val) and price_val > 0:
+			buy_btn.disabled = true
+			buy_btn.text = "잔액 부족"
+		buy_btn.pressed.connect(
+			func():
+				var r: Dictionary
+				if type == "house":
+					r = GameManager.buy_house(item_id)
+				else:
+					r = GameManager.buy_vehicle(item_id)
+				if r.get("success"):
+					AudioManager.play_buy()
+					_show_toast("구매 완료: %s" % item.get("name", ""))
+					_refresh_asset_view()
+				else:
+					AudioManager.play_error()
+					_show_toast("실패: " + r.get("reason", ""))
+				overlay.queue_free()
+				popup.queue_free()
+				GameClockManager.resume_from_event()
+		)
+		btn_row.add_child(buy_btn)
+
+	# 닫기 버튼
+	var close_btn := Button.new()
+	close_btn.text = "닫기"
+	close_btn.custom_minimum_size = Vector2(100, 42)
+	close_btn.add_theme_font_size_override("font_size", 16)
+	close_btn.add_theme_color_override("font_color", COL_TEXT_DIM)
+	close_btn.pressed.connect(
+		func():
+			overlay.queue_free()
+			popup.queue_free()
+			GameClockManager.resume_from_event()
+	)
+	btn_row.add_child(close_btn)
+
+
+## 주거/차량 아이콘 획득
+func _get_life_icon(type: String, item_id: String) -> Texture2D:
+	# 1. PNG 파일이 있으면 로드
+	var png_path := "res://assets/images/%s_%s.png" % [type, item_id]
+	if FileAccess.file_exists(png_path):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(png_path))
+		if img:
+			return ImageTexture.create_from_image(img)
+
+	# 2. IconGenerator로 도트 아이콘 생성
+	var icon_gen := IconGenerator.new()
+	if type == "house":
+		return icon_gen.make_house_icon(item_id, 96)
+	elif type == "vehicle":
+		return icon_gen.make_vehicle_icon(item_id, 96)
+	return null
 
 
 # ═══════════════════════════════════════════════
