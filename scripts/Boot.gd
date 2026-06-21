@@ -275,6 +275,7 @@ func _on_viewport_resized() -> void:
 func _on_new_game() -> void:
 	GameManager.reset_player()
 	StoryManager.check_start_story()
+	GameClockManager.start_new_game()
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 

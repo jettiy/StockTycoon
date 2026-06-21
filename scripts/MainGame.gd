@@ -121,7 +121,12 @@ func _connect_signals() -> void:
 	_pause_btn.pressed.connect(_on_pause_toggle)
 	# 자동 시간 흐름 시그널
 	GameClockManager.day_advanced.connect(_on_clock_day_advanced)
-	GameClockManager.day_progress_changed.connect(_on_day_progress_changed)
+	GameClockManager.time_changed.connect(_on_time_changed)
+	GameClockManager.phase_changed.connect(_on_phase_changed)
+	GameClockManager.pre_market_started.connect(_on_pre_market_started)
+	GameClockManager.market_opened.connect(_on_market_opened)
+	GameClockManager.market_closed.connect(_on_market_closed)
+	GameClockManager.hourly_price_update.connect(_on_hourly_price_update)
 	# 퀘스트/업적/스토리 알림
 	QuestManager.quest_completed.connect(_on_quest_completed)
 	QuestManager.achievement_unlocked.connect(_on_achievement_unlocked)
@@ -158,7 +163,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _init_static_ui() -> void:
 	_rank_label.text = "  " + GameManager.get_rank_name()
-	_day_label.text = "%d일차 09:00" % GameManager.player["day"]
+	_day_label.text = "%d일차 %s" % [GameManager.player["day"], GameClockManager.get_time_string()]
 	if _day_progress:
 		_day_progress.value = 0.0
 
@@ -1220,11 +1225,9 @@ func _on_sell() -> void:
 		_show_toast("실패: " + r.get("reason", ""))
 
 
-func _on_clock_day_advanced(r: Dictionary) -> void:
-	# 자동 시간 흐름 + 수동 버튼 공통 핸들러
+func _on_clock_day_advanced(day: int, r: Dictionary) -> void:
 	AudioManager.play_day_advance()
-	var msg := "%d일차" % r["day"]
-	# 자산 탭 새로고침 (사업 이벤트 등 반영)
+	var msg := "%d일차 시작" % day
 	_refresh_asset_view()
 	if r.get("salary", 0.0) > 0:
 		msg += " | 월급 +%s" % _fmt_won(r["salary"])
@@ -1235,36 +1238,240 @@ func _on_clock_day_advanced(r: Dictionary) -> void:
 		UIAnim.pop_in(_rank_label)
 	if r.has("bailout"):
 		msg += " | 파산방지 +%s" % _fmt_won(r["bailout"])
-	if r.get("dividends", 0.0) > 0:
-		msg += " | 배당금 +%s" % _fmt_won(r["dividends"])
-	_day_label.text = "%d일차 %s" % [r["day"], GameClockManager.get_virtual_time()]
+	_day_label.text = "%d일차 %s" % [day, GameClockManager.get_time_string()]
 	_show_toast(msg)
 
-	# 일일 이벤트 발생
-	var events := EventManager.roll_daily_events()
+	# 이벤트 발생 (r에 이미 events가 포함됨)
+	var events: Array = r.get("events", [])
 	for event in events:
-		var etype: String = event.get("type", "")
 		var etitle: String = event.get("title", "")
 		var extra := ""
 		if event.has("reward"):
-			var rw: float = event["reward"]
-			extra = " (%+.0f원)" % rw
+			extra = " (%+.0f원)" % float(event["reward"])
 		elif event.has("loss") and float(event["loss"]) > 0:
 			extra = " (-%.0f원 손실)" % float(event["loss"])
 		_show_toast("[이벤트] %s%s" % [etitle, extra])
-		# 이벤트 사운드
-		match etype:
-			"news": AudioManager.play_event_news()
-			"crypto_risk": AudioManager.play_event_bad()
-			"life":
-				if event.get("reward", 0.0) >= 0:
-					AudioManager.play_event_news()
-				else:
-					AudioManager.play_event_bad()
-	# 오래된 이벤트 정리
-	EventManager.clear_old_events()
-	# 진행 탭 새로고침
 	_refresh_progress_view()
+
+
+## 시간 변화 핸들러
+func _on_time_changed(hour: int, minute: int, phase: int) -> void:
+	if _day_label:
+		var day: int = GameManager.player.get("day", 1)
+		_day_label.text = "%d일차 %02d:%02d" % [day, hour, minute]
+	if _day_progress:
+		_day_progress.value = GameClockManager.get_phase_progress()
+	# 장중에만 주가 UI 갱신
+	if phase == GameClockManager.Phase.MARKET:
+		for sid in _stock_rows:
+			_update_stock_row(sid)
+
+
+## 페이즈 변화 핸들러
+func _on_phase_changed(old_phase: int, new_phase: int) -> void:
+	if new_phase == GameClockManager.Phase.PRE_MARKET:
+		_show_toast("장전 - 브리핑 확인", COL_ACCENT)
+	elif new_phase == GameClockManager.Phase.MARKET:
+		_show_toast("장 개시", COL_UP)
+	elif new_phase == GameClockManager.Phase.AFTER_HOURS:
+		_show_toast("장 마감 - 외부 활동 가능", COL_GOLD)
+	_show_next_day_button_if_after_hours()
+
+
+## 장전 시작 — 신문 팝업
+func _on_pre_market_started() -> void:
+	if not GameClockManager.pre_market_news_shown:
+		_show_newspaper_popup()
+		GameClockManager.pre_market_news_shown = true
+
+
+## 장 개시
+func _on_market_opened() -> void:
+	_show_toast("개장 - 주식 거래 가능", COL_UP)
+
+
+## 장 마감
+func _on_market_closed() -> void:
+	# 장마감 시 보유 종목 UI 갱신
+	for sid in _stock_rows:
+		_update_stock_row(sid)
+
+
+## 장중 1시간 경과 — 주가 갱신
+func _on_hourly_price_update(hour: int) -> void:
+	MarketSim.on_hourly_update()
+	for sid in _stock_rows:
+		_update_stock_row(sid)
+	if _selected_stock != "":
+		_update_detail_panel()
+
+
+## 장마감 "다음날로" 버튼 표시
+func _show_next_day_button_if_after_hours() -> void:
+	# 기존 버튼이 있으면 제거
+	var existing := get_node_or_null("NextDayButton")
+	if existing:
+		existing.queue_free()
+	# 장마감이 아니면 표시 안 함
+	if GameClockManager.current_phase != GameClockManager.Phase.AFTER_HOURS:
+		return
+	# "다음날로" 버튼 추가
+	var btn := Button.new()
+	btn.name = "NextDayButton"
+	btn.text = "다음날로"
+	btn.custom_minimum_size = Vector2(120, 46)
+	btn.add_theme_font_size_override("font_size", 17)
+	btn.add_theme_color_override("font_color", COL_GOLD)
+	btn.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	btn.offset_top = 60
+	btn.z_index = 50
+	btn.pressed.connect(_on_next_day)
+	add_child(btn)
+
+
+func _on_next_day() -> void:
+	var btn := get_node_or_null("NextDayButton")
+	if btn:
+		btn.queue_free()
+	GameClockManager.advance_to_next_day()
+
+
+## 신문 팝업 — 장전 브리핑
+func _show_newspaper_popup() -> void:
+	GameClockManager.pause_for_event()
+
+	var overlay := ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.85)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 70
+	add_child(overlay)
+
+	var popup := PanelContainer.new()
+	popup.set_anchors_preset(Control.PRESET_CENTER)
+	popup.custom_minimum_size = Vector2(620, 520)
+	popup.add_theme_stylebox_override("panel", _flat(Color(0.094, 0.092, 0.085, 1), 4))
+	popup.z_index = 71
+	add_child(popup)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	vbox.offset_left = 24
+	vbox.offset_top = 20
+	vbox.offset_right = -24
+	vbox.offset_bottom = -20
+	popup.add_child(vbox)
+
+	# 신문 헤더
+	var header := Label.new()
+	var day: int = GameManager.player.get("day", 1)
+	header.text = "=== %d일차 데일리 증권 브리핑 ===" % day
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	header.add_theme_font_size_override("font_size", 20)
+	header.add_theme_color_override("font_color", COL_GOLD)
+	vbox.add_child(header)
+
+	var sep1 := HSeparator.new()
+	vbox.add_child(sep1)
+
+	# 오늘의 시장 전망
+	var stocks: Array = MarketSim.get_all_stocks()
+	# 상승/하락 종목 집계
+	var up_count: int = 0
+	var down_count: int = 0
+	for s in stocks:
+		if float(s.get("change_pct", 0.0)) > 0:
+			up_count += 1
+		elif float(s.get("change_pct", 0.0)) < 0:
+			down_count += 1
+
+	var outlook_lbl := Label.new()
+	outlook_lbl.text = "전일 시장 요약: 상승 %d종목 | 하락 %d종목 | 보합 %d종목" % [up_count, down_count, stocks.size() - up_count - down_count]
+	outlook_lbl.add_theme_font_size_override("font_size", 14)
+	outlook_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+	vbox.add_child(outlook_lbl)
+
+	# 주요 뉴스
+	var news_header := Label.new()
+	news_header.text = "[ 주요 뉴스 ]"
+	news_header.add_theme_font_size_override("font_size", 16)
+	news_header.add_theme_color_override("font_color", COL_ACCENT)
+	vbox.add_child(news_header)
+
+	# 활성 이벤트를 뉴스로 표시
+	var events := EventManager.get_active_events()
+	if events.is_empty():
+		var no_news := Label.new()
+		no_news.text = "  오늘은 특별한 뉴스가 없습니다."
+		no_news.add_theme_font_size_override("font_size", 14)
+		no_news.add_theme_color_override("font_color", COL_TEXT_DIM)
+		vbox.add_child(no_news)
+	else:
+		for event in events:
+			var news_row := HBoxContainer.new()
+			news_row.add_theme_constant_override("separation", 8)
+			vbox.add_child(news_row)
+
+			var type_text := "[뉴스]"
+			var type_color: Color = COL_ACCENT
+			match event.get("type", ""):
+				"crypto_risk":
+					type_text = "[리스크]"
+					type_color = COL_DOWN
+				"life":
+					type_text = "[생활]"
+					type_color = COL_UP
+
+			var tag := Label.new()
+			tag.text = type_text
+			tag.add_theme_font_size_override("font_size", 13)
+			tag.add_theme_color_override("font_color", type_color)
+			tag.custom_minimum_size = Vector2(70, 0)
+			news_row.add_child(tag)
+
+			var title := Label.new()
+			title.text = event.get("title", "")
+			title.add_theme_font_size_override("font_size", 14)
+			title.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+			title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			news_row.add_child(title)
+
+	# 마켓 사이클 정보
+	var cycle_lbl := Label.new()
+	var mc: float = MarketSim.market_cycle
+	var cycle_text := "시장 분위기: 중립"
+	var cycle_color: Color = COL_TEXT_DIM
+	if mc > 0.3:
+		cycle_text = "시장 분위기: 강세 우위"
+		cycle_color = COL_UP
+	elif mc < -0.3:
+		cycle_text = "시장 분위기: 약세 우위"
+		cycle_color = COL_DOWN
+	cycle_lbl.text = cycle_text
+	cycle_lbl.add_theme_font_size_override("font_size", 14)
+	cycle_lbl.add_theme_color_override("font_color", cycle_color)
+	vbox.add_child(cycle_lbl)
+
+	vbox.add_child(_spacer(20))
+
+	# 확인 버튼
+	var btn_row := HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_child(btn_row)
+
+	var ok_btn := Button.new()
+	ok_btn.text = "확인"
+	ok_btn.custom_minimum_size = Vector2(120, 42)
+	ok_btn.add_theme_font_size_override("font_size", 17)
+	ok_btn.add_theme_color_override("font_color", COL_ACCENT)
+	ok_btn.pressed.connect(
+		func():
+			# 장전 뉴스 효과 미리 반영
+			MarketSim.apply_pre_market_effects()
+			overlay.queue_free()
+			popup.queue_free()
+			GameClockManager.resume_from_event()
+	)
+	btn_row.add_child(ok_btn)
 
 
 ## 퀘스트 완료 알림
@@ -1472,15 +1679,15 @@ func _on_net_worth_changed(nw: float) -> void:
 
 
 func _on_day_advanced(d: int) -> void:
-	_day_label.text = "%d일차 %s" % [d, GameClockManager.get_virtual_time()]
+	_day_label.text = "%d일차 %s" % [d, GameClockManager.get_time_string()]
 
 
-func _on_day_progress_changed(progress: float) -> void:
-	if _day_progress:
-		_day_progress.value = progress
+func _on_time_changed(hour: int, minute: int, phase: int) -> void:
 	if _day_label:
 		var day: int = GameManager.player.get("day", 1)
-		_day_label.text = "%d일차 %s" % [day, GameClockManager.get_virtual_time()]
+		_day_label.text = "%d일차 %02d:%02d" % [day, hour, minute]
+	if _day_progress:
+		_day_progress.value = GameClockManager.get_phase_progress()
 
 
 func _on_rank_up(nr: String) -> void:
@@ -2420,6 +2627,7 @@ func _refresh_event_view() -> void:
 # ═══════════════════════════════════════════════
 
 func _on_rival_challenge(npc_id: String) -> void:
+	GameClockManager.pause_for_event()
 	var result := NPCManager.challenge_rival(npc_id)
 	if result.get("success"):
 		if result.get("won"):
@@ -2429,27 +2637,33 @@ func _on_rival_challenge(npc_id: String) -> void:
 		_refresh_npc_view()
 	else:
 		_show_toast("실패: " + result.get("reason", ""))
+	GameClockManager.resume_from_event()
 
 
 func _on_helper_service(npc_id: String) -> void:
+	GameClockManager.pause_for_event()
 	var result := NPCManager.use_helper_service(npc_id)
 	if result.get("success"):
 		_show_toast(result.get("desc", "서비스 완료"))
 		_refresh_npc_view()
 	else:
 		_show_toast("실패: " + result.get("reason", ""))
+	GameClockManager.resume_from_event()
 
 
 func _on_give_gift(npc_id: String, amount: float) -> void:
+	GameClockManager.pause_for_event()
 	var result := NPCManager.give_gift(npc_id, amount)
 	if result.get("success"):
 		_show_toast("호감도 +%d → %d" % [result["gain"], result["affinity"]])
 		_refresh_npc_view()
 	else:
 		_show_toast("실패: " + result.get("reason", ""))
+	GameClockManager.resume_from_event()
 
 
 func _on_marry(npc_id: String) -> void:
+	GameClockManager.pause_for_event()
 	var result := NPCManager.marry(npc_id)
 	if result.get("success"):
 		var npc: Dictionary = result["npc"]
@@ -2459,6 +2673,7 @@ func _on_marry(npc_id: String) -> void:
 	else:
 		AudioManager.play_error()
 		_show_toast("실패: " + result.get("reason", ""))
+	GameClockManager.resume_from_event()
 
 
 func _on_generation_advance() -> void:

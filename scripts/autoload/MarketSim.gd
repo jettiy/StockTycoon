@@ -67,15 +67,15 @@ func _load_stock_data() -> void:
 		stocks[stock["id"]] = stock
 
 
-func _process(delta: float) -> void:
-	_elapsed += delta
-	_tick_timer += delta
-	if _tick_timer >= _tick_interval:
-		_tick_timer = 0.0
-		_tick()
+func _process(_delta: float) -> void:
+	# 시간 흐름은 GameClockManager가 관리
+	# 주가 갱신은 on_hourly_update()를 통해 장중에만 호출됨
+	pass
 
 
 func _tick() -> void:
+	_elapsed += _tick_interval
+	_tick_timer = 0.0
 	# 마켓 사이클: 사인파 + 노이즈 (bull/bear)
 	market_cycle = sin(_elapsed / _cycle_period * TAU) * _cycle_amplitude
 	market_cycle += _rng.randf_range(-0.15, 0.15)
@@ -178,8 +178,46 @@ func _load_json(path: String) -> Variant:
 	return JSON.parse_string(text)
 
 
-## 하루 경과 — 모든 종목의 시가 갱신
+## 하루 경과 — 시가 갱신 (전날 종가를 오늘 시가로)
 func advance_day() -> void:
+	for stock_id in stocks:
+		# 종가(close_price)가 있으면 그것을 시가로, 없으면 현재가
+		if stocks[stock_id].has("close_price"):
+			stocks[stock_id]["day_open"] = stocks[stock_id]["close_price"]
+			stocks[stock_id]["price"] = stocks[stock_id]["close_price"]
+		else:
+			stocks[stock_id]["day_open"] = stocks[stock_id]["price"]
+		stocks[stock_id]["change_pct"] = 0.0
+
+
+## 장 마감 시 종가 저장
+func save_close_prices() -> void:
+	for stock_id in stocks:
+		stocks[stock_id]["close_price"] = stocks[stock_id]["price"]
+
+
+## 장 개시 — day_open 재설정
+func on_market_open() -> void:
 	for stock_id in stocks:
 		stocks[stock_id]["day_open"] = stocks[stock_id]["price"]
 		stocks[stock_id]["change_pct"] = 0.0
+
+
+## 장중 1시간 경과 시 주가 갱신 (GameClockManager에서 호출)
+func on_hourly_update() -> void:
+	_tick()
+
+
+## 장전 뉴스가 주가에 미리 영향을 줄 때
+func apply_pre_market_effects() -> void:
+	# 장전 뉴스 이벤트를 미리 반영
+	for stock_id in stocks:
+		var stock: Dictionary = stocks[stock_id]
+		if _event_multipliers.has(stock_id):
+			var event_change: float = (_event_multipliers[stock_id] - 1.0) * 0.05
+			var new_price: float = float(stock["price"]) * (1.0 + event_change)
+			new_price = maxf(new_price, stock["base_price"] * 0.1)
+			new_price = minf(new_price, stock["base_price"] * 100.0)
+			stock["price"] = new_price
+			price_changed.emit(stock_id, new_price, 0.0)
+	market_tick.emit()
