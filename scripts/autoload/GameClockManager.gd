@@ -54,7 +54,14 @@ func _process(delta: float) -> void:
 		Phase.AFTER_HOURS:
 			if _tick_accumulator >= AFTER_HOURS_SECONDS_PER_HOUR:
 				_tick_accumulator = 0.0
-				_advance_hour()
+				# 장마감은 16:00~19:00까지만 (3시간), 이후 자동 다음날
+				if in_game_hour >= 19:
+					in_game_hour = 7
+					in_game_minute = 0
+					_do_advance_day()
+					_enter_phase(Phase.PRE_MARKET)
+				else:
+					_advance_hour()
 
 
 func _get_minutes_per_tick() -> int:
@@ -75,9 +82,11 @@ func _advance_hour() -> void:
 		_enter_phase(Phase.MARKET)
 		return
 
-	# 장마감 → 다음날 장전 (07:00)
-	if current_phase == Phase.AFTER_HOURS and in_game_hour >= 24:
+	# 장마감 → 다음날 장전 (07:00) — 19:00에 자동 전환
+	# 실제 전환은 _process에서 처리하므로 여기서는 시간만 진행
+	if current_phase == Phase.AFTER_HOURS and in_game_hour >= 19:
 		in_game_hour = 7
+		in_game_minute = 0
 		_do_advance_day()
 		_enter_phase(Phase.PRE_MARKET)
 		return
@@ -198,8 +207,8 @@ func get_phase_progress() -> float:
 			var total_min: float = (in_game_hour - 9) * 60 + in_game_minute
 			return total_min / 420.0
 		Phase.AFTER_HOURS:
-			# 16:00 ~ 24:00 = 8시간 (자정까지만)
-			return float(in_game_hour - 16) / 8.0
+			# 16:00 ~ 19:00 = 3시간
+			return float(in_game_hour - 16) / 3.0
 		_: return 0.0
 
 

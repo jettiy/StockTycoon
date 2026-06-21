@@ -1274,8 +1274,7 @@ func _on_phase_changed(old_phase: int, new_phase: int) -> void:
 	elif new_phase == GameClockManager.Phase.MARKET:
 		_show_toast("장 개시", COL_UP)
 	elif new_phase == GameClockManager.Phase.AFTER_HOURS:
-		_show_toast("장 마감 - 외부 활동 가능", COL_GOLD)
-	_show_next_day_button_if_after_hours()
+		_show_toast("장 마감 - 외부 활동", COL_GOLD)
 
 
 ## 장전 시작 — 신문 팝업
@@ -1306,36 +1305,6 @@ func _on_hourly_price_update(hour: int) -> void:
 		_update_detail_panel()
 
 
-## 장마감 "다음날로" 버튼 표시
-func _show_next_day_button_if_after_hours() -> void:
-	# 기존 버튼이 있으면 제거
-	var existing := get_node_or_null("NextDayButton")
-	if existing:
-		existing.queue_free()
-	# 장마감이 아니면 표시 안 함
-	if GameClockManager.current_phase != GameClockManager.Phase.AFTER_HOURS:
-		return
-	# "다음날로" 버튼 추가
-	var btn := Button.new()
-	btn.name = "NextDayButton"
-	btn.text = "다음날로"
-	btn.custom_minimum_size = Vector2(120, 46)
-	btn.add_theme_font_size_override("font_size", 17)
-	btn.add_theme_color_override("font_color", COL_GOLD)
-	btn.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	btn.offset_top = 60
-	btn.z_index = 50
-	btn.pressed.connect(_on_next_day)
-	add_child(btn)
-
-
-func _on_next_day() -> void:
-	var btn := get_node_or_null("NextDayButton")
-	if btn:
-		btn.queue_free()
-	GameClockManager.advance_to_next_day()
-
-
 ## 신문 팝업 — 장전 브리핑
 func _show_newspaper_popup() -> void:
 	GameClockManager.pause_for_event()
@@ -1348,34 +1317,42 @@ func _show_newspaper_popup() -> void:
 
 	var popup := PanelContainer.new()
 	popup.set_anchors_preset(Control.PRESET_CENTER)
-	popup.custom_minimum_size = Vector2(620, 520)
+	popup.custom_minimum_size = Vector2(560, 400)
 	popup.add_theme_stylebox_override("panel", _flat(Color(0.094, 0.092, 0.085, 1), 4))
 	popup.z_index = 71
 	add_child(popup)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
-	vbox.offset_left = 24
-	vbox.offset_top = 20
-	vbox.offset_right = -24
-	vbox.offset_bottom = -20
-	popup.add_child(vbox)
+	# 전체 VBox (헤더 + 스크롤 영역 + 버튼)
+	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 6)
+	outer.offset_left = 20
+	outer.offset_top = 16
+	outer.offset_right = -20
+	outer.offset_bottom = -16
+	popup.add_child(outer)
 
 	# 신문 헤더
 	var header := Label.new()
 	var day: int = GameManager.player.get("day", 1)
-	header.text = "=== %d일차 데일리 증권 브리핑 ===" % day
+	header.text = "%d일차 데일리 증권 브리핑" % day
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_theme_font_size_override("font_size", 20)
 	header.add_theme_color_override("font_color", COL_GOLD)
-	vbox.add_child(header)
+	outer.add_child(header)
 
-	var sep1 := HSeparator.new()
-	vbox.add_child(sep1)
+	# 스크롤 영역
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size = Vector2(0, 250)
+	outer.add_child(scroll)
 
-	# 오늘의 시장 전망
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 4)
+	scroll.add_child(content)
+
+	# 시장 요약
 	var stocks: Array = MarketSim.get_all_stocks()
-	# 상승/하락 종목 집계
 	var up_count: int = 0
 	var down_count: int = 0
 	for s in stocks:
@@ -1385,31 +1362,48 @@ func _show_newspaper_popup() -> void:
 			down_count += 1
 
 	var outlook_lbl := Label.new()
-	outlook_lbl.text = "전일 시장 요약: 상승 %d종목 | 하락 %d종목 | 보합 %d종목" % [up_count, down_count, stocks.size() - up_count - down_count]
+	outlook_lbl.text = "전일: 상승 %d | 하락 %d | 보합 %d" % [up_count, down_count, stocks.size() - up_count - down_count]
 	outlook_lbl.add_theme_font_size_override("font_size", 14)
 	outlook_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
-	vbox.add_child(outlook_lbl)
+	content.add_child(outlook_lbl)
 
-	# 주요 뉴스
+	# 마켓 사이클
+	var cycle_lbl := Label.new()
+	var mc: float = MarketSim.market_cycle
+	var cycle_text := "시장: 중립"
+	var cycle_color: Color = COL_TEXT_DIM
+	if mc > 0.3:
+		cycle_text = "시장: 강세 우위"
+		cycle_color = COL_UP
+	elif mc < -0.3:
+		cycle_text = "시장: 약세 우위"
+		cycle_color = COL_DOWN
+	cycle_lbl.text = cycle_text
+	cycle_lbl.add_theme_font_size_override("font_size", 14)
+	cycle_lbl.add_theme_color_override("font_color", cycle_color)
+	content.add_child(cycle_lbl)
+
+	# 주요 뉴스 (최대 5개만)
 	var news_header := Label.new()
-	news_header.text = "[ 주요 뉴스 ]"
+	news_header.text = "[ 오늘의 뉴스 ]"
 	news_header.add_theme_font_size_override("font_size", 16)
 	news_header.add_theme_color_override("font_color", COL_ACCENT)
-	vbox.add_child(news_header)
+	content.add_child(news_header)
 
-	# 활성 이벤트를 뉴스로 표시
 	var events := EventManager.get_active_events()
-	if events.is_empty():
+	var display_events := events.slice(maxi(0, events.size() - 5), events.size())
+
+	if display_events.is_empty():
 		var no_news := Label.new()
-		no_news.text = "  오늘은 특별한 뉴스가 없습니다."
+		no_news.text = "  특별한 뉴스가 없습니다."
 		no_news.add_theme_font_size_override("font_size", 14)
 		no_news.add_theme_color_override("font_color", COL_TEXT_DIM)
-		vbox.add_child(no_news)
+		content.add_child(no_news)
 	else:
-		for event in events:
+		for event in display_events:
 			var news_row := HBoxContainer.new()
 			news_row.add_theme_constant_override("separation", 8)
-			vbox.add_child(news_row)
+			content.add_child(news_row)
 
 			var type_text := "[뉴스]"
 			var type_color: Color = COL_ACCENT
@@ -1435,28 +1429,10 @@ func _show_newspaper_popup() -> void:
 			title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			news_row.add_child(title)
 
-	# 마켓 사이클 정보
-	var cycle_lbl := Label.new()
-	var mc: float = MarketSim.market_cycle
-	var cycle_text := "시장 분위기: 중립"
-	var cycle_color: Color = COL_TEXT_DIM
-	if mc > 0.3:
-		cycle_text = "시장 분위기: 강세 우위"
-		cycle_color = COL_UP
-	elif mc < -0.3:
-		cycle_text = "시장 분위기: 약세 우위"
-		cycle_color = COL_DOWN
-	cycle_lbl.text = cycle_text
-	cycle_lbl.add_theme_font_size_override("font_size", 14)
-	cycle_lbl.add_theme_color_override("font_color", cycle_color)
-	vbox.add_child(cycle_lbl)
-
-	vbox.add_child(_spacer(20))
-
-	# 확인 버튼
+	# 확인 버튼 (항상 하단 고정)
 	var btn_row := HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_child(btn_row)
+	outer.add_child(btn_row)
 
 	var ok_btn := Button.new()
 	ok_btn.text = "확인"
@@ -1465,7 +1441,6 @@ func _show_newspaper_popup() -> void:
 	ok_btn.add_theme_color_override("font_color", COL_ACCENT)
 	ok_btn.pressed.connect(
 		func():
-			# 장전 뉴스 효과 미리 반영
 			MarketSim.apply_pre_market_effects()
 			overlay.queue_free()
 			popup.queue_free()
