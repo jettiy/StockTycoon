@@ -16,7 +16,7 @@ const COL_PANEL_LIGHT := Color(0.122, 0.126, 0.138, 1)
 
 const CATEGORY_FILTERS := ["전체", "한국", "미국", "코인"]
 const CATEGORY_MAP := {"전체": "", "한국": "korea", "미국": "usa", "코인": "coin"}
-const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
+const VIEW_TABS := ["시장", "자동매매", "자산", "NPC", "이벤트"]
 
 # ─── 씬 노드 참조 (@onready로 씬 트리에서 자동 연결) ───
 @onready var _rank_label: Label = %RankLabel
@@ -26,6 +26,10 @@ const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
 @onready var _day_progress: ProgressBar = %DayProgress
 @onready var _passive_label: Label = %PassiveLabel
 @onready var _advance_btn: Button = %AdvanceButton
+@onready var _pause_btn: Button = %PauseButton
+@onready var _speed1_btn: Button = %Speed1x
+@onready var _speed2_btn: Button = %Speed2x
+@onready var _speed4_btn: Button = %Speed4x
 @onready var _view_tabs: HBoxContainer = %ViewTabs
 @onready var _cat_tabs: HBoxContainer = %CatTabs
 @onready var _content: VBoxContainer = %ContentArea
@@ -34,7 +38,7 @@ const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
 # 동적 생성되는 뷰
 var _market_view: HBoxContainer
 var _autotrade_view: VBoxContainer
-var _life_view: VBoxContainer
+var _asset_view: VBoxContainer
 var _current_view: String = "시장"
 
 # 시장 뷰 내부
@@ -63,8 +67,8 @@ var _trade_total_label: Label
 var _autotrade_slots: Array = []
 
 # 라이프
-var _life_housing_container: VBoxContainer
-var _life_vehicle_container: VBoxContainer
+var _asset_housing_container: VBoxContainer
+var _asset_vehicle_container: VBoxContainer
 
 # NPC 뷰
 var _npc_view: VBoxContainer
@@ -73,6 +77,11 @@ var _npc_container: VBoxContainer
 # 이벤트 뷰
 var _event_view: VBoxContainer
 var _event_container: VBoxContainer
+
+# 사업 뷰
+var _asset_business_container: VBoxContainer
+var _asset_breakdown_container: VBoxContainer
+var _business_cat_filter: String = ""
 
 # 세대교체 버튼
 var _gen_button: Button
@@ -83,7 +92,7 @@ func _ready() -> void:
 	_init_static_ui()
 	_build_market_view()
 	_build_autotrade_view()
-	_build_life_view()
+	_build_asset_view()
 	_build_npc_view()
 	_build_event_view()
 	_show_view("시장")
@@ -104,6 +113,12 @@ func _connect_signals() -> void:
 	# 자동 시간 흐름 시그널
 	GameClockManager.day_advanced.connect(_on_clock_day_advanced)
 	GameClockManager.day_progress_changed.connect(_on_day_progress_changed)
+	# 시간 컨트롤 버튼
+	_pause_btn.pressed.connect(_on_pause_toggle)
+	_speed1_btn.pressed.connect(_on_speed_change.bind(1.0))
+	_speed2_btn.pressed.connect(_on_speed_change.bind(2.0))
+	_speed4_btn.pressed.connect(_on_speed_change.bind(4.0))
+	_update_speed_button_styles()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -111,7 +126,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.keycode:
 			KEY_1: _show_view("시장")
 			KEY_2: _show_view("자동매매")
-			KEY_3: _show_view("라이프")
+			KEY_3: _show_view("자산")
 			KEY_4: _show_view("NPC")
 			KEY_5: _show_view("이벤트")
 			KEY_SPACE: GameClockManager.force_advance_day()
@@ -566,62 +581,377 @@ func _create_at_slot(index: int) -> PanelContainer:
 #   라이프 뷰
 # ═══════════════════════════════════════════════
 
-func _build_life_view() -> void:
-	_life_view = VBoxContainer.new()
-	_life_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_life_view.visible = false
-	_content.add_child(_life_view)
+func _build_asset_view() -> void:
+	_asset_view = VBoxContainer.new()
+	_asset_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_asset_view.visible = false
+	_content.add_child(_asset_view)
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_life_view.add_child(scroll)
+	_asset_view.add_child(scroll)
 
 	var inner := VBoxContainer.new()
 	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	inner.add_theme_constant_override("separation", 6)
+	inner.add_theme_constant_override("separation", 8)
 	scroll.add_child(inner)
 
+	# ── 자동수익 분석 카드 ──
+	var bd_header := Label.new()
+	bd_header.text = "  자동수익 분석"
+	bd_header.add_theme_font_size_override("font_size", 20)
+	bd_header.add_theme_color_override("font_color", COL_ACCENT)
+	inner.add_child(bd_header)
+
+	_asset_breakdown_container = VBoxContainer.new()
+	_asset_breakdown_container.add_theme_constant_override("separation", 2)
+	inner.add_child(_asset_breakdown_container)
+
+	# ── 주거 ──
 	var hh := Label.new()
 	hh.text = "  주거"
 	hh.add_theme_font_size_override("font_size", 20)
 	hh.add_theme_color_override("font_color", COL_ACCENT)
 	inner.add_child(hh)
 
-	_life_housing_container = VBoxContainer.new()
-	_life_housing_container.add_theme_constant_override("separation", 3)
-	inner.add_child(_life_housing_container)
+	_asset_housing_container = VBoxContainer.new()
+	_asset_housing_container.add_theme_constant_override("separation", 3)
+	inner.add_child(_asset_housing_container)
 
+	# ── 차량 ──
 	var vh := Label.new()
 	vh.text = "  차량"
 	vh.add_theme_font_size_override("font_size", 20)
 	vh.add_theme_color_override("font_color", COL_ACCENT)
 	inner.add_child(vh)
 
-	_life_vehicle_container = VBoxContainer.new()
-	_life_vehicle_container.add_theme_constant_override("separation", 3)
-	inner.add_child(_life_vehicle_container)
+	_asset_vehicle_container = VBoxContainer.new()
+	_asset_vehicle_container.add_theme_constant_override("separation", 3)
+	inner.add_child(_asset_vehicle_container)
 
-	_refresh_life_view()
+	# ── 사업 운영 ──
+	var bh := Label.new()
+	bh.text = "  사업 운영"
+	bh.add_theme_font_size_override("font_size", 20)
+	bh.add_theme_color_override("font_color", COL_ACCENT)
+	inner.add_child(bh)
+
+	_asset_business_container = VBoxContainer.new()
+	_asset_business_container.add_theme_constant_override("separation", 4)
+	inner.add_child(_asset_business_container)
+
+	_refresh_asset_view()
 
 
-func _refresh_life_view() -> void:
-	for c in _life_housing_container.get_children():
+func _refresh_asset_view() -> void:
+	# 주거
+	for c in _asset_housing_container.get_children():
 		c.queue_free()
 	var cur_house: String = GameManager.player["house"]
 	for i in range(GameManager.get_housing_list().size()):
 		var h: Dictionary = GameManager.get_housing_list()[i]
 		var is_cur: bool = h["id"] == cur_house
 		var locked: bool = i > 0 and GameManager.get_housing_list()[i - 1]["id"] != cur_house and not is_cur
-		_life_housing_container.add_child(_life_row(h, "house", is_cur, locked, i))
+		_asset_housing_container.add_child(_life_row(h, "house", is_cur, locked, i))
 
-	for c in _life_vehicle_container.get_children():
+	# 차량
+	for c in _asset_vehicle_container.get_children():
 		c.queue_free()
 	var cur_veh: String = GameManager.player["vehicle"]
 	for i in range(GameManager.get_vehicle_list().size()):
 		var v: Dictionary = GameManager.get_vehicle_list()[i]
 		var is_cur: bool = v["id"] == cur_veh
 		var locked: bool = i > 0 and GameManager.get_vehicle_list()[i - 1]["id"] != cur_veh and not is_cur
-		_life_vehicle_container.add_child(_life_row(v, "vehicle", is_cur, locked, i))
+		_asset_vehicle_container.add_child(_life_row(v, "vehicle", is_cur, locked, i))
+
+	# 사업
+	_refresh_business_view()
+	# 자동수익 분석
+	_refresh_breakdown()
+
+
+func _refresh_asset_view() -> void:
+	_refresh_asset_view()
+
+
+## 자동수익 분석 카드 갱신
+func _refresh_breakdown() -> void:
+	for c in _asset_breakdown_container.get_children():
+		c.queue_free()
+
+	var bd: Dictionary = PassiveIncomeManager.get_projected_breakdown()
+	var biz_per_sec: float = BusinessManager.calc_tick_revenue() / PassiveIncomeManager._tick_interval
+
+	var items := [
+		["배당", bd.get("dividend", 0.0), COL_UP],
+		["임대", bd.get("rental", 0.0), COL_ACCENT],
+		["이자", bd.get("interest", 0.0), COL_TEXT_DIM],
+		["사업", biz_per_sec, COL_GOLD],
+	]
+	var total: float = 0.0
+	for item in items:
+		total += item[1]
+
+	for item in items:
+		var row := HBoxContainer.new()
+		_asset_breakdown_container.add_child(row)
+
+		var nl := Label.new()
+		nl.text = "  %s" % item[0]
+		nl.add_theme_font_size_override("font_size", 15)
+		nl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		nl.custom_minimum_size = Vector2(80, 0)
+		row.add_child(nl)
+
+		var sp := Control.new()
+		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(sp)
+
+		var vl := Label.new()
+		vl.text = "+%s/초" % _fmt_won_short(item[1])
+		vl.add_theme_font_size_override("font_size", 15)
+		vl.add_theme_color_override("font_color", item[2])
+		vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		vl.custom_minimum_size = Vector2(120, 0)
+		row.add_child(vl)
+
+	# 총합
+	var sep := HSeparator.new()
+	_asset_breakdown_container.add_child(sep)
+
+	var total_row := HBoxContainer.new()
+	_asset_breakdown_container.add_child(total_row)
+
+	var tl := Label.new()
+	tl.text = "  총합"
+	tl.add_theme_font_size_override("font_size", 17)
+	tl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	tl.custom_minimum_size = Vector2(80, 0)
+	total_row.add_child(tl)
+
+	var tsp := Control.new()
+	tsp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	total_row.add_child(tsp)
+
+	var tvl := Label.new()
+	tvl.text = "+%s/초" % _fmt_won_short(total)
+	tvl.add_theme_font_size_override("font_size", 17)
+	tvl.add_theme_color_override("font_color", COL_GOLD)
+	tvl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	tvl.custom_minimum_size = Vector2(120, 0)
+	total_row.add_child(tvl)
+
+
+## 사업 목록 갱신
+func _refresh_business_view() -> void:
+	for c in _asset_business_container.get_children():
+		c.queue_free()
+
+	var defs: Array = BusinessManager.get_all_defs()
+	for def in defs:
+		var card := _create_business_card(def)
+		_asset_business_container.add_child(card)
+
+
+## 사업 카드 생성
+func _create_business_card(def: Dictionary) -> Control:
+	var owned: Dictionary = BusinessManager.get_owned()
+	var is_owned: bool = owned.has(def.get("id", ""))
+	var entry: Dictionary = owned.get(def.get("id", ""), {})
+
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _flat(COL_PANEL if not is_owned else Color(0.10, 0.15, 0.12, 1), 6))
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	vbox.offset_left = 12
+	vbox.offset_top = 8
+	vbox.offset_right = -12
+	vbox.offset_bottom = -8
+	panel.add_child(vbox)
+
+	# 이름 + 카테고리
+	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(top_row)
+
+	var name_lbl := Label.new()
+	name_lbl.text = def.get("name", "")
+	name_lbl.add_theme_font_size_override("font_size", 17)
+	name_lbl.add_theme_color_override("font_color", COL_TEXT_BRIGHT if is_owned else COL_TEXT_DIM)
+	top_row.add_child(name_lbl)
+
+	var cat_lbl := Label.new()
+	cat_lbl.text = _biz_cat_name(def.get("category", ""))
+	cat_lbl.add_theme_font_size_override("font_size", 13)
+	cat_lbl.add_theme_color_override("font_color", COL_ACCENT)
+	top_row.add_child(cat_lbl)
+
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(sp)
+
+	# 보유 상태
+	if is_owned:
+		var lvl_lbl := Label.new()
+		lvl_lbl.text = "Lv.%d" % int(entry.get("level", 1))
+		lvl_lbl.add_theme_font_size_override("font_size", 15)
+		lvl_lbl.add_theme_color_override("font_color", COL_GOLD)
+		top_row.add_child(lvl_lbl)
+
+	# 정보 라인
+	var info_row := HBoxContainer.new()
+	info_row.add_theme_constant_override("separation", 16)
+	vbox.add_child(info_row)
+
+	var daily_rev: float = 0.0
+	if is_owned:
+		daily_rev = BusinessManager._calc_business_daily_revenue(def.get("id", ""))
+	var per_sec: float = daily_rev / 10.0 if daily_rev > 0 else 0.0
+
+	_info_label(info_row, "수익/일", _fmt_won_short(daily_rev), COL_UP if daily_rev > 0 else COL_TEXT_DIM)
+	_info_label(info_row, "수익/초", _fmt_won_short(per_sec), COL_GOLD if per_sec > 0 else COL_TEXT_DIM)
+	if is_owned:
+		_info_label(info_row, "직원", "%d/5" % int(entry.get("employees", 0)), COL_TEXT_DIM)
+		var ev_mult: float = float(entry.get("event_multiplier", 1.0))
+		if ev_mult != 1.0:
+			var ev_text := "호황" if ev_mult > 1.0 else "불황"
+			_info_label(info_row, "이벤트", ev_text, COL_UP if ev_mult > 1.0 else COL_DOWN)
+	else:
+		_info_label(info_row, "가격", _fmt_won_short(float(def.get("purchase_price", 0))), COL_GOLD)
+
+	# 버튼 영역
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(btn_row)
+
+	if is_owned:
+		# 업그레이드 버튼
+		var up_cost: float = BusinessManager.get_upgrade_cost(def.get("id", ""))
+		var up_btn := Button.new()
+		up_btn.text = "업그레이드 (%s)" % _fmt_won_short(up_cost)
+		up_btn.custom_minimum_size = Vector2(0, 36)
+		up_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		up_btn.add_theme_font_size_override("font_size", 14)
+		var max_level: int = 10
+		if int(entry.get("level", 1)) >= max_level:
+			up_btn.text = "최대 레벨"
+			up_btn.disabled = true
+		elif not GameManager.can_afford(up_cost):
+			up_btn.disabled = true
+		up_btn.pressed.connect(_on_business_upgrade.bind(def.get("id", "")))
+		btn_row.add_child(up_btn)
+
+		# 직원 고용 버튼
+		var emp_btn := Button.new()
+		var emp_count: int = int(entry.get("employees", 0))
+		emp_btn.text = "직원 고용 (%d/5)" % emp_count
+		emp_btn.custom_minimum_size = Vector2(0, 36)
+		emp_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		emp_btn.add_theme_font_size_override("font_size", 14)
+		if emp_count >= 5:
+			emp_btn.disabled = true
+		emp_btn.pressed.connect(_on_business_hire.bind(def.get("id", "")))
+		btn_row.add_child(emp_btn)
+	else:
+		# 구매 버튼
+		var price: float = float(def.get("purchase_price", 0))
+		var buy_btn := Button.new()
+		buy_btn.text = "구매 (%s)" % _fmt_won_short(price)
+		buy_btn.custom_minimum_size = Vector2(0, 36)
+		buy_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		buy_btn.add_theme_font_size_override("font_size", 14)
+		buy_btn.add_theme_color_override("font_color", COL_UP)
+		# 카테고리 제한 확인
+		var cat_count: int = BusinessManager._count_category(def.get("category", ""))
+		if cat_count >= 2:
+			buy_btn.text = "카테고리 한도 (2/2)"
+			buy_btn.disabled = true
+		elif not GameManager.can_afford(price):
+			buy_btn.disabled = true
+		buy_btn.pressed.connect(_on_business_purchase.bind(def.get("id", "")))
+		btn_row.add_child(buy_btn)
+
+	return panel
+
+
+func _info_label(parent: HBoxContainer, key: String, val: String, color: Color) -> void:
+	var lbl := Label.new()
+	lbl.text = "%s: %s" % [key, val]
+	lbl.add_theme_font_size_override("font_size", 14)
+	lbl.add_theme_color_override("font_color", color)
+	parent.add_child(lbl)
+
+
+func _biz_cat_name(cat: String) -> String:
+	match cat:
+		"food": return "요식업"
+		"it": return "IT"
+		"retail": return "소매/서비스"
+		"realestate": return "부동산"
+		_: return cat
+
+
+## 사업 이벤트 핸들러
+func _on_business_purchase(bid: String) -> void:
+	var r := BusinessManager.purchase(bid)
+	if r.get("success"):
+		AudioManager.play_buy()
+		_show_toast("사업 구매: %s" % r.get("business", {}).get("name", ""))
+	else:
+		AudioManager.play_error()
+		_show_toast("실패: " + r.get("reason", ""))
+	_refresh_asset_view()
+
+
+func _on_business_upgrade(bid: String) -> void:
+	var r := BusinessManager.upgrade(bid)
+	if r.get("success"):
+		AudioManager.play_buy()
+		_show_toast("업그레이드: Lv.%d" % r.get("new_level", 1))
+	else:
+		AudioManager.play_error()
+		_show_toast("실패: " + r.get("reason", ""))
+	_refresh_asset_view()
+
+
+func _on_business_hire(bid: String) -> void:
+	var r := BusinessManager.hire_employee(bid)
+	if r.get("success"):
+		_show_toast("직원 고용: %d/5" % r.get("employees", 0))
+	else:
+		AudioManager.play_error()
+		_show_toast("실패: " + r.get("reason", ""))
+	_refresh_asset_view()
+
+
+## 시간 컨트롤 핸들러
+func _on_pause_toggle() -> void:
+	GameClockManager.toggle_pause()
+	if GameClockManager.is_paused:
+		_pause_btn.text = ">"
+	else:
+		_pause_btn.text = "||"
+	_update_speed_button_styles()
+
+
+func _on_speed_change(mult: float) -> void:
+	GameClockManager.set_speed(mult)
+	if GameClockManager.is_paused:
+		GameClockManager.is_paused = false
+		_pause_btn.text = "||"
+	_update_speed_button_styles()
+
+
+func _update_speed_button_styles() -> void:
+	var cur_speed := GameClockManager.speed_multiplier
+	var cur_paused := GameClockManager.is_paused
+	_speed1_btn.add_theme_stylebox_override("normal", _flat(COL_ACCENT if cur_speed == 1.0 and not cur_paused else COL_PANEL, 4))
+	_speed2_btn.add_theme_stylebox_override("normal", _flat(COL_ACCENT if cur_speed == 2.0 and not cur_paused else COL_PANEL, 4))
+	_speed4_btn.add_theme_stylebox_override("normal", _flat(COL_ACCENT if cur_speed == 4.0 and not cur_paused else COL_PANEL, 4))
+	_speed1_btn.add_theme_color_override("font_color", Color.WHITE if cur_speed == 1.0 and not cur_paused else COL_TEXT_DIM)
+	_speed2_btn.add_theme_color_override("font_color", Color.WHITE if cur_speed == 2.0 and not cur_paused else COL_TEXT_DIM)
+	_speed4_btn.add_theme_color_override("font_color", Color.WHITE if cur_speed == 4.0 and not cur_paused else COL_TEXT_DIM)
 
 
 func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx: int) -> Control:
@@ -704,7 +1034,7 @@ func _show_view(view_name: String) -> void:
 	_current_view = view_name
 	_market_view.visible = (view_name == "시장")
 	_autotrade_view.visible = (view_name == "자동매매")
-	_life_view.visible = (view_name == "라이프")
+	_asset_view.visible = (view_name == "자산")
 	_npc_view.visible = (view_name == "NPC")
 	_event_view.visible = (view_name == "이벤트")
 	_cat_tabs.visible = (view_name == "시장")
@@ -719,6 +1049,7 @@ func _show_view(view_name: String) -> void:
 				_selected_stock = _stock_rows.keys()[0]
 			_update_row_selection()
 			_update_detail_panel()
+		"자산": _refresh_asset_view()
 		"NPC": _refresh_npc_view()
 		"이벤트": _refresh_event_view()
 
@@ -889,6 +1220,8 @@ func _on_clock_day_advanced(r: Dictionary) -> void:
 	# 자동 시간 흐름 + 수동 버튼 공통 핸들러
 	AudioManager.play_day_advance()
 	var msg := "%d일차" % r["day"]
+	# 자산 탭 새로고침 (사업 이벤트 등 반영)
+	_refresh_asset_view()
 	if r.get("salary", 0.0) > 0:
 		msg += " | 월급 +%s" % _fmt_won(r["salary"])
 	if r.get("rank_up", "") != "":
@@ -1029,7 +1362,7 @@ func _on_life_buy(type: String, id: String) -> void:
 		r = GameManager.buy_vehicle(id)
 	if r.get("success"):
 		_show_toast("구매 완료: %s" % r.get(type, {}).get("name", ""))
-		_refresh_life_view()
+		_refresh_asset_view()
 	else:
 		_show_toast("실패: " + r.get("reason", ""))
 
@@ -1492,7 +1825,7 @@ func _on_generation_advance() -> void:
 		_show_toast("세대교체! %d대 — 상속 %s" % [result["new_generation"], _fmt_won(result["inherited_cash"])])
 		_refresh_npc_view()
 		_refresh_all()
-		_refresh_life_view()
+		_refresh_asset_view()
 	else:
 		_show_toast("실패: " + result.get("reason", ""))
 

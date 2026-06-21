@@ -243,7 +243,8 @@ func get_projected_per_second() -> float:
 	var dividend := _calc_tick_dividend()
 	var rental := _calc_tick_rental()
 	var interest := _calc_tick_interest()
-	return (dividend + rental + interest) / _tick_interval
+	var business := BusinessManager.calc_tick_revenue()
+	return (dividend + rental + interest + business) / _tick_interval
 
 ## 하루 예상 수익 (UI 표시용)
 func get_projected_per_day() -> float:
@@ -254,7 +255,8 @@ func get_projected_breakdown() -> Dictionary:
 	return {
 		"dividend": _calc_tick_dividend() / _tick_interval,
 		"rental": _calc_tick_rental() / _tick_interval,
-		"interest": _calc_tick_interest() / _tick_interval
+		"interest": _calc_tick_interest() / _tick_interval,
+		"business": BusinessManager.calc_tick_revenue() / _tick_interval
 	}
 
 func _load_json(path: String) -> Variant:
