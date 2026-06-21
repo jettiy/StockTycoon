@@ -16,7 +16,7 @@ const COL_PANEL_LIGHT := Color(0.122, 0.126, 0.138, 1)
 
 const CATEGORY_FILTERS := ["전체", "한국", "미국", "코인"]
 const CATEGORY_MAP := {"전체": "", "한국": "korea", "미국": "usa", "코인": "coin"}
-const VIEW_TABS := ["시장", "자동매매", "자산", "NPC", "이벤트"]
+const VIEW_TABS := ["시장", "자동매매", "자산", "NPC", "진행"]
 
 # ─── 씬 노드 참조 (@onready로 씬 트리에서 자동 연결) ───
 @onready var _rank_label: Label = %RankLabel
@@ -75,8 +75,16 @@ var _npc_view: VBoxContainer
 var _npc_container: VBoxContainer
 
 # 이벤트 뷰
-var _event_view: VBoxContainer
+var _progress_view: VBoxContainer
+var _progress_subtabs: HBoxContainer
+var _progress_content: VBoxContainer
+var _progress_subtab: String = "뉴스"
 var _event_container: VBoxContainer
+var _quest_container: VBoxContainer
+var _achievement_container: VBoxContainer
+var _story_container: VBoxContainer
+var _tutorial_container: VBoxContainer
+var _cutscene_popup: PanelContainer
 
 # 사업 뷰
 var _asset_business_container: VBoxContainer
@@ -94,7 +102,7 @@ func _ready() -> void:
 	_build_autotrade_view()
 	_build_asset_view()
 	_build_npc_view()
-	_build_event_view()
+	_build_progress_view()
 	_show_view("시장")
 	_refresh_all()
 	_connect_signals()
@@ -113,6 +121,11 @@ func _connect_signals() -> void:
 	# 자동 시간 흐름 시그널
 	GameClockManager.day_advanced.connect(_on_clock_day_advanced)
 	GameClockManager.day_progress_changed.connect(_on_day_progress_changed)
+	# 퀘스트/업적/스토리 알림
+	QuestManager.quest_completed.connect(_on_quest_completed)
+	QuestManager.achievement_unlocked.connect(_on_achievement_unlocked)
+	StoryManager.chapter_started.connect(_on_story_chapter_started)
+	StoryManager.story_event.connect(_on_story_event)
 	# 시간 컨트롤 버튼
 	_pause_btn.pressed.connect(_on_pause_toggle)
 	_speed1_btn.pressed.connect(_on_speed_change.bind(1.0))
@@ -128,7 +141,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_2: _show_view("자동매매")
 			KEY_3: _show_view("자산")
 			KEY_4: _show_view("NPC")
-			KEY_5: _show_view("이벤트")
+			KEY_5: _show_view("진행")
 			KEY_SPACE: GameClockManager.force_advance_day()
 			KEY_ESCAPE: _close_trade_panel()
 			KEY_F11:
@@ -670,10 +683,6 @@ func _refresh_asset_view() -> void:
 	_refresh_breakdown()
 
 
-func _refresh_asset_view() -> void:
-	_refresh_asset_view()
-
-
 ## 자동수익 분석 카드 갱신
 func _refresh_breakdown() -> void:
 	for c in _asset_breakdown_container.get_children():
@@ -1036,7 +1045,7 @@ func _show_view(view_name: String) -> void:
 	_autotrade_view.visible = (view_name == "자동매매")
 	_asset_view.visible = (view_name == "자산")
 	_npc_view.visible = (view_name == "NPC")
-	_event_view.visible = (view_name == "이벤트")
+	_progress_view.visible = (view_name == "진행")
 	_cat_tabs.visible = (view_name == "시장")
 	for child in _view_tabs.get_children():
 		if child is Button and child.has_meta("view"):
@@ -1051,7 +1060,7 @@ func _show_view(view_name: String) -> void:
 			_update_detail_panel()
 		"자산": _refresh_asset_view()
 		"NPC": _refresh_npc_view()
-		"이벤트": _refresh_event_view()
+		"진행": _refresh_progress_view()
 
 
 func _on_view_tab_pressed(vn: String) -> void:
@@ -1259,6 +1268,111 @@ func _on_clock_day_advanced(r: Dictionary) -> void:
 					AudioManager.play_event_bad()
 	# 오래된 이벤트 정리
 	EventManager.clear_old_events()
+	# 진행 탭 새로고침
+	_refresh_progress_view()
+
+
+## 퀘스트 완료 알림
+func _on_quest_completed(quest_id: String, reward: Dictionary) -> void:
+	var msg := "[퀘스트 완료] %s" % reward.get("name", quest_id)
+	if reward.get("cash", 0.0) > 0:
+		msg += " +%s" % _fmt_won(reward["cash"])
+	_show_toast(msg)
+	if _current_view == "진행":
+		_refresh_quest_section()
+
+
+## 업적 달성 알림
+func _on_achievement_unlocked(ach_id: String, name: String) -> void:
+	_show_toast("[업적 달성] %s" % name)
+	if _current_view == "진행":
+		_refresh_achievement_section()
+
+
+## 스토리 챕터 시작 알림
+func _on_story_chapter_started(chapter_id: String) -> void:
+	_show_toast("[스토리] 새 챕터 시작")
+	if _current_view == "진행":
+		_refresh_story_section()
+
+
+## 스토리 이벤트 (컷신 텍스트)
+func _on_story_event(text: String) -> void:
+	_show_cutscene_popup(text)
+
+
+## 컷신 팝업 표시 (최소 구현)
+func _show_cutscene_popup(text: String) -> void:
+	if _cutscene_popup and is_instance_valid(_cutscene_popup):
+		_cutscene_popup.queue_free()
+
+	# 오버레이
+	var overlay := ColorRect.new()
+	overlay.color = Color(0, 0, 0, 0.75)
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.z_index = 60
+	add_child(overlay)
+
+	# 팝업 패널
+	_cutscene_popup = PanelContainer.new()
+	_cutscene_popup.set_anchors_preset(Control.PRESET_CENTER)
+	_cutscene_popup.custom_minimum_size = Vector2(500, 200)
+	_cutscene_popup.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 8))
+	_cutscene_popup.z_index = 61
+	add_child(_cutscene_popup)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	vbox.offset_left = 24
+	vbox.offset_top = 20
+	vbox.offset_right = -24
+	vbox.offset_bottom = -20
+	_cutscene_popup.add_child(vbox)
+
+	# 대사 텍스트
+	var text_lbl := Label.new()
+	text_lbl.text = text
+	text_lbl.add_theme_font_size_override("font_size", 16)
+	text_lbl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	text_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(text_lbl)
+
+	# 버튼 행
+	var btn_row := HBoxContainer.new()
+	btn_row.alignment = BoxContainer.ALIGNMENT_END
+	btn_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(btn_row)
+
+	# 다음 버튼
+	var next_btn := Button.new()
+	next_btn.text = "다음"
+	next_btn.custom_minimum_size = Vector2(80, 36)
+	next_btn.add_theme_font_size_override("font_size", 15)
+	next_btn.add_theme_color_override("font_color", COL_ACCENT)
+	next_btn.pressed.connect(
+		func():
+			StoryManager.advance_scene()
+			overlay.queue_free()
+			_cutscene_popup.queue_free()
+			_cutscene_popup = null
+	)
+	btn_row.add_child(next_btn)
+
+	# 스킵 버튼
+	var skip_btn := Button.new()
+	skip_btn.text = "스킵"
+	skip_btn.custom_minimum_size = Vector2(80, 36)
+	skip_btn.add_theme_font_size_override("font_size", 15)
+	skip_btn.add_theme_color_override("font_color", COL_TEXT_DIM)
+	skip_btn.pressed.connect(
+		func():
+			StoryManager.skip_chapter()
+			overlay.queue_free()
+			_cutscene_popup.queue_free()
+			_cutscene_popup = null
+	)
+	btn_row.add_child(skip_btn)
 
 
 func _on_save() -> void:
@@ -1662,36 +1776,114 @@ func action_box_offset(row: HBoxContainer) -> void:
 #   이벤트 뷰
 # ═══════════════════════════════════════════════
 
-func _build_event_view() -> void:
-	_event_view = VBoxContainer.new()
-	_event_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_event_view.visible = false
-	_content.add_child(_event_view)
+func _build_progress_view() -> void:
+	_progress_view = VBoxContainer.new()
+	_progress_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_progress_view.visible = false
+	_content.add_child(_progress_view)
 
+	# 서브탭 버튼
+	_progress_subtabs = HBoxContainer.new()
+	_progress_subtabs.add_theme_constant_override("separation", 4)
+	_progress_view.add_child(_progress_subtabs)
+
+	for tab_name in ["뉴스", "퀘스트", "업적", "스토리"]:
+		var btn := Button.new()
+		btn.text = tab_name
+		btn.custom_minimum_size = Vector2(90, 34)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.set_meta("subtab", tab_name)
+		btn.pressed.connect(_on_progress_subtab.bind(tab_name))
+		_progress_subtabs.add_child(btn)
+	_update_subtab_styles()
+
+	# 스크롤 콘텐츠 영역
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_event_view.add_child(scroll)
+	_progress_view.add_child(scroll)
 
+	_progress_content = VBoxContainer.new()
+	_progress_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_progress_content.add_theme_constant_override("separation", 6)
+	scroll.add_child(_progress_content)
+
+	# 각 섹션 컨테이너
 	_event_container = VBoxContainer.new()
-	_event_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_event_container.add_theme_constant_override("separation", 4)
-	scroll.add_child(_event_container)
+	_progress_content.add_child(_event_container)
+
+	_quest_container = VBoxContainer.new()
+	_quest_container.add_theme_constant_override("separation", 4)
+	_progress_content.add_child(_quest_container)
+
+	_achievement_container = VBoxContainer.new()
+	_achievement_container.add_theme_constant_override("separation", 4)
+	_progress_content.add_child(_achievement_container)
+
+	_story_container = VBoxContainer.new()
+	_story_container.add_theme_constant_override("separation", 4)
+	_progress_content.add_child(_story_container)
+
+	# 초반 목표 카드 (항상 상단)
+	_tutorial_container = VBoxContainer.new()
+	_tutorial_container.add_theme_constant_override("separation", 4)
+	_progress_content.add_child(_tutorial_container)
+	# tutorial은 맨 앞으로 이동
+	_progress_content.move_child(_tutorial_container, 0)
+
+	_show_progress_subtab("뉴스")
 
 
-func _refresh_event_view() -> void:
+func _on_progress_subtab(tab_name: String) -> void:
+	_show_progress_subtab(tab_name)
+
+
+func _show_progress_subtab(tab_name: String) -> void:
+	_progress_subtab = tab_name
+	_event_container.visible = (tab_name == "뉴스")
+	_quest_container.visible = (tab_name == "퀘스트")
+	_achievement_container.visible = (tab_name == "업적")
+	_story_container.visible = (tab_name == "스토리")
+	# 초반 목표는 뉴스와 퀘스트 탭에서만 표시
+	_tutorial_container.visible = (tab_name == "뉴스" or tab_name == "퀘스트")
+	_update_subtab_styles()
+	_refresh_progress_view()
+
+
+func _update_subtab_styles() -> void:
+	for child in _progress_subtabs.get_children():
+		if child is Button and child.has_meta("subtab"):
+			var active: bool = child.get_meta("subtab") == _progress_subtab
+			if active:
+				child.add_theme_stylebox_override("normal", _flat(COL_ACCENT, 4))
+				child.add_theme_color_override("font_color", Color.WHITE)
+			else:
+				child.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+				child.add_theme_color_override("font_color", COL_TEXT_DIM)
+
+
+func _refresh_progress_view() -> void:
+	_refresh_news_section()
+	_refresh_quest_section()
+	_refresh_achievement_section()
+	_refresh_story_section()
+	_refresh_tutorial_card()
+
+
+## 뉴스 섹션 (기존 _refresh_event_view와 동일)
+func _refresh_news_section() -> void:
 	for c in _event_container.get_children():
 		c.queue_free()
 
 	var events := EventManager.get_active_events()
 	if events.is_empty():
 		var empty := Label.new()
-		empty.text = "  진행 중인 이벤트가 없습니다"
+		empty.text = "  진행 중인 뉴스가 없습니다"
 		empty.add_theme_font_size_override("font_size", 14)
 		empty.add_theme_color_override("font_color", COL_TEXT_DIM)
 		_event_container.add_child(empty)
 		return
 
-	# 최신순 정렬
 	events.reverse()
 
 	for event in events:
@@ -1706,7 +1898,6 @@ func _refresh_event_view() -> void:
 		var hbox := HBoxContainer.new()
 		hbox.add_theme_constant_override("separation", 8)
 
-		# 타입 아이콘 (텍스트)
 		var type_text := ""
 		var type_color: Color = COL_TEXT_DIM
 		match event.get("type", ""):
@@ -1722,13 +1913,13 @@ func _refresh_event_view() -> void:
 
 		var tag := Label.new()
 		tag.text = "  " + type_text
-		tag.add_theme_font_size_override("font_size", 12)
+		tag.add_theme_font_size_override("font_size", 13)
 		tag.add_theme_color_override("font_color", type_color)
 		hbox.add_child(tag)
 
 		var day := Label.new()
 		day.text = "%d일차" % event.get("day", 0)
-		day.add_theme_font_size_override("font_size", 11)
+		day.add_theme_font_size_override("font_size", 12)
 		day.add_theme_color_override("font_color", COL_TEXT_DIM)
 		hbox.add_child(day)
 
@@ -1736,7 +1927,6 @@ func _refresh_event_view() -> void:
 		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hbox.add_child(sp)
 
-		# 손익 표시
 		if event.has("reward"):
 			var reward: float = event["reward"]
 			var r_label := Label.new()
@@ -1746,31 +1936,365 @@ func _refresh_event_view() -> void:
 			else:
 				r_label.text = "%.0f원" % reward
 				r_label.add_theme_color_override("font_color", COL_DOWN)
-			r_label.add_theme_font_size_override("font_size", 13)
+			r_label.add_theme_font_size_override("font_size", 14)
 			hbox.add_child(r_label)
 		elif event.has("loss") and float(event["loss"]) > 0:
 			var l_label := Label.new()
 			l_label.text = "-%.0f원 손실" % float(event["loss"])
-			l_label.add_theme_font_size_override("font_size", 13)
+			l_label.add_theme_font_size_override("font_size", 14)
 			l_label.add_theme_color_override("font_color", COL_DOWN)
 			hbox.add_child(l_label)
 
 		vbox.add_child(hbox)
 
-		# 제목 + 설명
 		var title := Label.new()
 		title.text = "  " + event.get("title", "")
-		title.add_theme_font_size_override("font_size", 14)
+		title.add_theme_font_size_override("font_size", 15)
 		title.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 		vbox.add_child(title)
 
 		var desc := Label.new()
 		desc.text = "  " + event.get("desc", "")
-		desc.add_theme_font_size_override("font_size", 12)
+		desc.add_theme_font_size_override("font_size", 13)
 		desc.add_theme_color_override("font_color", COL_TEXT_DIM)
 		vbox.add_child(desc)
 
 		_event_container.add_child(panel)
+
+
+## 퀘스트 섹션
+func _refresh_quest_section() -> void:
+	for c in _quest_container.get_children():
+		c.queue_free()
+
+	_build_quest_header("일일 퀘스트", QuestManager.get_daily_quests())
+	_build_quest_header("주간 퀘스트", QuestManager.get_weekly_quests())
+	_build_quest_header("월간 퀘스트", QuestManager.get_monthly_quests())
+
+
+func _build_quest_header(title: String, quests: Array) -> void:
+	var header := Label.new()
+	header.text = "  " + title
+	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_color_override("font_color", COL_ACCENT)
+	_quest_container.add_child(header)
+
+	if quests.is_empty():
+		var empty := Label.new()
+		empty.text = "    없음"
+		empty.add_theme_font_size_override("font_size", 14)
+		empty.add_theme_color_override("font_color", COL_TEXT_DIM)
+		_quest_container.add_child(empty)
+		return
+
+	for q in quests:
+		var panel := PanelContainer.new()
+		var claimed: bool = q.get("claimed", false)
+		var complete: bool = q.get("progress", 0) >= q.get("target", 1)
+		if claimed:
+			panel.add_theme_stylebox_override("panel", _flat(Color(0.10, 0.15, 0.10, 1), 4))
+		elif complete:
+			panel.add_theme_stylebox_override("panel", _flat(Color(0.12, 0.14, 0.10, 1), 4))
+		else:
+			panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 4))
+		_quest_container.add_child(panel)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 8)
+		panel.add_child(hbox)
+
+		var info := VBoxContainer.new()
+		info.add_theme_constant_override("separation", 2)
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(info)
+
+		var name_lbl := Label.new()
+		name_lbl.text = "  " + q.get("name", "")
+		name_lbl.add_theme_font_size_override("font_size", 15)
+		if claimed:
+			name_lbl.add_theme_color_override("font_color", COL_UP)
+		elif complete:
+			name_lbl.add_theme_color_override("font_color", COL_GOLD)
+		else:
+			name_lbl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+		info.add_child(name_lbl)
+
+		var desc_lbl := Label.new()
+		desc_lbl.text = "    " + q.get("desc", "")
+		desc_lbl.add_theme_font_size_override("font_size", 13)
+		desc_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		info.add_child(desc_lbl)
+
+		# 진행도 바
+		var prog_row := HBoxContainer.new()
+		progRow_quest(prog_row, q)
+		info.add_child(prog_row)
+
+
+func progRow_quest(row: HBoxContainer, q: Dictionary) -> void:
+	row.add_theme_constant_override("separation", 6)
+	var prog: int = int(q.get("progress", 0))
+	var target: int = int(q.get("target", 1))
+
+	var prog_lbl := Label.new()
+	prog_lbl.text = "    %d / %d" % [prog, target]
+	prog_lbl.add_theme_font_size_override("font_size", 14)
+	prog_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+	row.add_child(prog_lbl)
+
+	var bar := ProgressBar.new()
+	bar.min_value = 0
+	bar.max_value = float(max(target, 1))
+	bar.value = float(prog)
+	bar.custom_minimum_size = Vector2(100, 10)
+	bar.show_percentage = false
+	row.add_child(bar)
+
+	var status_lbl := Label.new()
+	if q.get("claimed", false):
+		status_lbl.text = "완료됨"
+		status_lbl.add_theme_color_override("font_color", COL_UP)
+	elif prog >= target:
+		status_lbl.text = "보상 지급 완료"
+		status_lbl.add_theme_color_override("font_color", COL_GOLD)
+	else:
+		status_lbl.text = "진행 중"
+		status_lbl.add_theme_color_override("font_color", COL_ACCENT)
+	status_lbl.add_theme_font_size_override("font_size", 13)
+	row.add_child(status_lbl)
+
+
+## 업적 섹션
+func _refresh_achievement_section() -> void:
+	for c in _achievement_container.get_children():
+		c.queue_free()
+
+	var unlocked: int = QuestManager.get_unlocked_achievement_count()
+	var total: int = QuestManager.get_total_achievement_count()
+
+	# 달성률 헤더
+	var rate_header := Label.new()
+	rate_header.text = "  업적 달성률: %d / %d" % [unlocked, total]
+	rate_header.add_theme_font_size_override("font_size", 18)
+	rate_header.add_theme_color_override("font_color", COL_GOLD)
+	_achievement_container.add_child(rate_header)
+
+	# 진행률 바
+	var rate_bar := ProgressBar.new()
+	rate_bar.min_value = 0
+	rate_bar.max_value = float(max(total, 1))
+	rate_bar.value = float(unlocked)
+	rate_bar.custom_minimum_size = Vector2(0, 14)
+	rate_bar.show_percentage = false
+	_achievement_container.add_child(rate_bar)
+
+	var achs: Array = QuestManager.get_achievements()
+	for ach in achs:
+		var panel := PanelContainer.new()
+		var is_unlocked: bool = ach.get("unlocked", false)
+		if is_unlocked:
+			panel.add_theme_stylebox_override("panel", _flat(Color(0.12, 0.10, 0.05, 1), 4))
+		else:
+			panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 4))
+		_achievement_container.add_child(panel)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 8)
+		panel.add_child(hbox)
+
+		var info := VBoxContainer.new()
+		info.add_theme_constant_override("separation", 2)
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(info)
+
+		var name_lbl := Label.new()
+		name_lbl.text = "  " + ach.get("name", "")
+		name_lbl.add_theme_font_size_override("font_size", 15)
+		if is_unlocked:
+			name_lbl.add_theme_color_override("font_color", COL_GOLD)
+		else:
+			name_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		info.add_child(name_lbl)
+
+		var desc_lbl := Label.new()
+		desc_lbl.text = "    " + ach.get("desc", "")
+		desc_lbl.add_theme_font_size_override("font_size", 13)
+		desc_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		info.add_child(desc_lbl)
+
+		# 카테고리 + 상태
+		var cat_lbl := Label.new()
+		var cat_name := _ach_cat_name(ach.get("category", ""))
+		cat_lbl.text = "    [%s]" % cat_name
+		cat_lbl.add_theme_font_size_override("font_size", 12)
+		cat_lbl.add_theme_color_override("font_color", COL_ACCENT if is_unlocked else COL_TEXT_DIM)
+		info.add_child(cat_lbl)
+
+		var status_lbl := Label.new()
+		if is_unlocked:
+			status_lbl.text = "달성"
+			status_lbl.add_theme_color_override("font_color", COL_GOLD)
+		else:
+			status_lbl.text = "미달성"
+			status_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		status_lbl.add_theme_font_size_override("font_size", 14)
+		status_lbl.custom_minimum_size = Vector2(50, 0)
+		status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		status_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hbox.add_child(status_lbl)
+
+
+func _ach_cat_name(cat: String) -> String:
+	match cat:
+		"trading": return "거래"
+		"wealth": return "자산"
+		"life": return "라이프"
+		"income": return "수익"
+		"business": return "사업"
+		"special": return "특수"
+		_: return cat
+
+
+## 스토리 섹션
+func _refresh_story_section() -> void:
+	for c in _story_container.get_children():
+		c.queue_free()
+
+	var completed: Array = StoryManager.get_completed_chapters()
+	var total_ch: int = StoryManager.get_chapter_count()
+
+	# 진행률 헤더
+	var header := Label.new()
+	header.text = "  스토리 진행: %d / %d 챕터" % [completed.size(), total_ch]
+	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_color_override("font_color", COL_ACCENT)
+	_story_container.add_child(header)
+
+	# 챕터 목록 — data/story.json에서 읽기
+	var story_data = load_json("res://data/story.json")
+	if story_data == null or not story_data.has("chapters"):
+		return
+	var chapters: Array = story_data["chapters"]
+
+	for i in range(chapters.size()):
+		var ch: Dictionary = chapters[i]
+		var ch_id: String = ch.get("id", "")
+		var is_done: bool = completed.has(ch_id)
+
+		var panel := PanelContainer.new()
+		if is_done:
+			panel.add_theme_stylebox_override("panel", _flat(Color(0.10, 0.15, 0.10, 1), 4))
+		else:
+			panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 4))
+		_story_container.add_child(panel)
+
+		var hbox := HBoxContainer.new()
+		hbox.add_theme_constant_override("separation", 8)
+		panel.add_child(hbox)
+
+		var num_lbl := Label.new()
+		num_lbl.text = "  Ch.%d" % (i + 1)
+		num_lbl.add_theme_font_size_override("font_size", 15)
+		num_lbl.add_theme_color_override("font_color", COL_GOLD if is_done else COL_TEXT_DIM)
+		num_lbl.custom_minimum_size = Vector2(60, 0)
+		hbox.add_child(num_lbl)
+
+		var info := VBoxContainer.new()
+		info.add_theme_constant_override("separation", 2)
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hbox.add_child(info)
+
+		var name_lbl := Label.new()
+		name_lbl.text = ch.get("title", "")
+		name_lbl.add_theme_font_size_override("font_size", 15)
+		name_lbl.add_theme_color_override("font_color", COL_TEXT_BRIGHT if is_done else COL_TEXT_DIM)
+		info.add_child(name_lbl)
+
+		# 트리거 조건 표시
+		var trigger: Dictionary = ch.get("trigger", {})
+		var trig_text := _trigger_desc(trigger)
+		var trig_lbl := Label.new()
+		trig_lbl.text = "    조건: " + trig_text
+		trig_lbl.add_theme_font_size_override("font_size", 13)
+		trig_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		info.add_child(trig_lbl)
+
+		var status_lbl := Label.new()
+		if is_done:
+			status_lbl.text = "완료"
+			status_lbl.add_theme_color_override("font_color", COL_UP)
+		else:
+			status_lbl.text = "미달성"
+			status_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+		status_lbl.add_theme_font_size_override("font_size", 14)
+		status_lbl.custom_minimum_size = Vector2(50, 0)
+		status_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		status_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		hbox.add_child(status_lbl)
+
+
+func _trigger_desc(trigger: Dictionary) -> String:
+	var type: String = trigger.get("type", "")
+	match type:
+		"start": return "게임 시작"
+		"net_worth": return "순자산 %s" % _fmt_won(float(trigger.get("value", 0)))
+		"rank_index": return "직급 달성"
+		"married_days": return "결혼 후 %d일" % int(trigger.get("value", 0))
+		_: return type
+
+
+## 초반 목표 카드
+func _refresh_tutorial_card() -> void:
+	for c in _tutorial_container.get_children():
+		c.queue_free()
+
+	var header := Label.new()
+	header.text = "  초반 목표"
+	header.add_theme_font_size_override("font_size", 18)
+	header.add_theme_color_override("font_color", COL_ACCENT)
+	_tutorial_container.add_child(header)
+
+	var goals := [
+		["첫 주식 매수", GameManager.player.get("trade_count", 0) > 0],
+		["첫 매도 (수익 실현)", GameManager.player.get("winning_trades", 0) > 0],
+		["자동매매 슬롯 설정", AutoTradeManager.get_active_count() > 0],
+		["첫 사업 구매", BusinessManager.get_owned().size() > 0],
+		["순자산 5천만원 달성", GameManager.get_net_worth() >= 50000000],
+	]
+
+	for goal in goals:
+		var done: bool = goal[1]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_tutorial_container.add_child(row)
+
+		var check := Label.new()
+		check.text = "[v]" if done else "[ ]"
+		check.add_theme_font_size_override("font_size", 15)
+		check.add_theme_color_override("font_color", COL_UP if done else COL_TEXT_DIM)
+		check.custom_minimum_size = Vector2(30, 0)
+		row.add_child(check)
+
+		var lbl := Label.new()
+		lbl.text = goal[0]
+		lbl.add_theme_font_size_override("font_size", 15)
+		lbl.add_theme_color_override("font_color", COL_UP if done else COL_TEXT_BRIGHT)
+		row.add_child(lbl)
+
+
+func load_json(path: String) -> Variant:
+	if not FileAccess.file_exists(path):
+		return null
+	var file := FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return null
+	var text := file.get_as_text()
+	file.close()
+	return JSON.parse_string(text)
+
+
+func _refresh_event_view() -> void:
+	_refresh_progress_view()
 
 
 # ═══════════════════════════════════════════════
