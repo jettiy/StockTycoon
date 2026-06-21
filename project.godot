@@ -24,6 +24,7 @@ AudioManager="*res://scripts/autoload/AudioManager.gd"
 PassiveIncomeManager="*res://scripts/autoload/PassiveIncomeManager.gd"
 StoryManager="*res://scripts/autoload/StoryManager.gd"
 QuestManager="*res://scripts/autoload/QuestManager.gd"
+BusinessManager="*res://scripts/autoload/BusinessManager.gd"
 
 [display]
 

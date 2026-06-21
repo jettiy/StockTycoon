@@ -327,6 +327,14 @@ func _check_achievement_condition(ach: Dictionary) -> bool:
 		"bear_market_profit":
 			# 약세장에서 수익 — 추후 구현
 			return false
+		"business_count":
+			return BusinessManager.get_owned().size() >= int(target)
+		"business_categories":
+			var cats: Dictionary = {}
+			for bid in BusinessManager.get_owned():
+				var bdef = BusinessManager._get_def(bid)
+				cats[bdef.get("category", "")] = true
+			return cats.size() >= int(target)
 		_:
 			return false
 

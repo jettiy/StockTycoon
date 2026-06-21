@@ -231,6 +231,16 @@ func advance_day() -> Dictionary:
 	if passive.has("interest") and passive["interest"] > 0:
 		result["interest"] = passive["interest"]
 
+	# 사업 일일 수익 정산
+	var biz_rev := BusinessManager.pay_daily_revenue()
+	if biz_rev["total"] > 0:
+		result["business_revenue"] = biz_rev["total"]
+
+	# 사업 이벤트 롤
+	var biz_events := BusinessManager.roll_daily_events()
+	if biz_events.size() > 0:
+		result["business_events"] = biz_events
+
 	# 파산 방지 지원금
 	var bailout_thresh: float = _balance.get("difficulty", {}).get("bailout_threshold", 500000)
 	var bailout_amt: float = _balance.get("difficulty", {}).get("bailout_amount", 2000000)

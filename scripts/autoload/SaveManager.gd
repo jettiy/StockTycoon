@@ -25,6 +25,7 @@ func save_game() -> bool:
 		},
 		"story": StoryManager.serialize(),
 		"quests": QuestManager.serialize(),
+		"businesses": BusinessManager.serialize(),
 		"timestamp": Time.get_unix_time_from_system(),
 	}
 
@@ -80,6 +81,10 @@ func load_game() -> bool:
 	# 퀘스트/업적 복원
 	if data.has("quests"):
 		QuestManager.deserialize(data["quests"])
+	
+	# 사업 복원
+	if data.has("businesses"):
+		BusinessManager.deserialize(data["businesses"])
 	
 	loaded.emit()
 	return true

@@ -1,0 +1,248 @@
+{
+  "config": {
+    "max_businesses_per_category": 2,
+    "base_upgrade_cost_multiplier": 0.3,
+    "upgrade_revenue_bonus_per_level": 0.2,
+    "max_level": 10,
+    "employee_revenue_bonus": 0.05,
+    "max_employees": 5,
+    "employee_hire_energy_cost": 3,
+    "event_chance_daily": 0.12,
+    "game_accel": 10.0
+  },
+  "businesses": [
+    {
+      "id": "food_truck",
+      "name": "길거리 음식차",
+      "category": "food",
+      "tier": 1,
+      "purchase_price": 1000000,
+      "base_revenue_per_day": 10000,
+      "desc": "가장 작은 시작. 떡볶이와 순대로 시작하는 사업.",
+      "icon": "🚚"
+    },
+    {
+      "id": "cafe",
+      "name": "카페",
+      "category": "food",
+      "tier": 2,
+      "purchase_price": 30000000,
+      "base_revenue_per_day": 200000,
+      "desc": "조용한 골목 카페. 크지 않지만 안정적인 수익.",
+      "icon": "☕"
+    },
+    {
+      "id": "korean_bbq",
+      "name": "고깃집",
+      "category": "food",
+      "tier": 3,
+      "purchase_price": 300000000,
+      "base_revenue_per_day": 1000000,
+      "desc": "직원 3명이 돌아가는 중형 식당. 저녁마다 붐빈다.",
+      "icon": "🥩"
+    },
+    {
+      "id": "franchise",
+      "name": "프랜차이즈",
+      "category": "food",
+      "tier": 4,
+      "purchase_price": 10000000000,
+      "base_revenue_per_day": 8000000,
+      "desc": "전국 체인 20개점. 이제 사업가라 불러도 좋다.",
+      "icon": "🏢"
+    },
+    {
+      "id": "hotel_restaurant",
+      "name": "호텔 레스토랑",
+      "category": "food",
+      "tier": 5,
+      "purchase_price": 100000000000,
+      "base_revenue_per_day": 30000000,
+      "desc": "미슐랭 3스타. VIP 고객이 예약부터 기다린다.",
+      "icon": "🏨"
+    },
+    {
+      "id": "solo_app",
+      "name": "1인 앱개발",
+      "category": "it",
+      "tier": 1,
+      "purchase_price": 5000000,
+      "base_revenue_per_day": 80000,
+      "desc": "방구석에서 코딩. 광고 수익으로 시작.",
+      "icon": "💻"
+    },
+    {
+      "id": "startup",
+      "name": "스타트업",
+      "category": "it",
+      "tier": 2,
+      "purchase_price": 1000000000,
+      "base_revenue_per_day": 4000000,
+      "desc": "직원 10명. 시리즈A 투자 유치 완료.",
+      "icon": "🚀"
+    },
+    {
+      "id": "unicorn",
+      "name": "유니콘 기업",
+      "category": "it",
+      "tier": 3,
+      "purchase_price": 100000000000,
+      "base_revenue_per_day": 150000000,
+      "desc": "기업가치 1조. 이제 언론이 당신을 주목한다.",
+      "icon": "🦄"
+    },
+    {
+      "id": "bigtech",
+      "name": "빅테크",
+      "category": "it",
+      "tier": 4,
+      "purchase_price": 2000000000000,
+      "base_revenue_per_day": 1000000000,
+      "desc": "글로벌 IT 기업. 사용자 수 1억 명.",
+      "icon": "🌐"
+    },
+    {
+      "id": "metaverse_empire",
+      "name": "메타버스 제국",
+      "category": "it",
+      "tier": 5,
+      "purchase_price": 50000000000000,
+      "base_revenue_per_day": 10000000000,
+      "desc": "가상 세계의 지배자. 현실과 메타버스를 오가는 제국.",
+      "icon": "🌌"
+    },
+    {
+      "id": "convenience_store",
+      "name": "편의점",
+      "category": "retail",
+      "tier": 1,
+      "purchase_price": 100000000,
+      "base_revenue_per_day": 500000,
+      "desc": "24시간 운영. 동네 필수 시설.",
+      "icon": "🏪"
+    },
+    {
+      "id": "gym",
+      "name": "헬스장",
+      "category": "retail",
+      "tier": 2,
+      "purchase_price": 500000000,
+      "base_revenue_per_day": 1500000,
+      "desc": "PT 회원권이 주 수익원. 재방문율이 높다.",
+      "icon": "💪"
+    },
+    {
+      "id": "supermarket",
+      "name": "대형마트",
+      "category": "retail",
+      "tier": 3,
+      "purchase_price": 20000000000,
+      "base_revenue_per_day": 12000000,
+      "desc": "주말마다 인산인해. 식품관이 핵심.",
+      "icon": "🛒"
+    },
+    {
+      "id": "shopping_mall",
+      "name": "복합쇼핑몰",
+      "category": "retail",
+      "tier": 4,
+      "purchase_price": 500000000000,
+      "base_revenue_per_day": 80000000,
+      "desc": "쇼핑, 영화, 식당 한곳에. 주말 나들이 명소.",
+      "icon": "🏬"
+    },
+    {
+      "id": "studio_apt_rental",
+      "name": "월세 원룸",
+      "category": "realestate",
+      "tier": 1,
+      "purchase_price": 200000000,
+      "base_revenue_per_day": 70000,
+      "desc": "원룸 5채. 가장 안정적인 부동산 투자.",
+      "icon": "🏠"
+    },
+    {
+      "id": "commercial_building",
+      "name": "상가",
+      "category": "realestate",
+      "tier": 2,
+      "purchase_price": 5000000000,
+      "base_revenue_per_day": 8000000,
+      "desc": "핵심 상권 상가. 임대수익 + 자산가치 상승.",
+      "icon": "🏬"
+    },
+    {
+      "id": "office_building",
+      "name": "오피스 빌딩",
+      "category": "realestate",
+      "tier": 3,
+      "purchase_price": 100000000000,
+      "base_revenue_per_day": 100000000,
+      "desc": "강남 오피스. 대기업 임차인이 가득하다.",
+      "icon": "🏢"
+    },
+    {
+      "id": "resort",
+      "name": "리조트",
+      "category": "realestate",
+      "tier": 4,
+      "purchase_price": 2000000000000,
+      "base_revenue_per_day": 1000000000,
+      "desc": "제주도 해변 리조트. 휴양과 수익을 동시에.",
+      "icon": "🏝️"
+    }
+  ],
+  "events": [
+    {
+      "id": "boom",
+      "name": "사업 호황",
+      "desc": "{business}이(가) 붐비고 있습니다!",
+      "type": "revenue_boost",
+      "multiplier": 2.0,
+      "duration_days": 7,
+      "weight": 30
+    },
+    {
+      "id": "recession",
+      "name": "불황",
+      "desc": "{business} 매출이 줄었습니다.",
+      "type": "revenue_penalty",
+      "multiplier": 0.5,
+      "duration_days": 5,
+      "weight": 20
+    },
+    {
+      "id": "viral",
+      "name": "바이럴",
+      "desc": "{business}이(가) SNS에서 화제!",
+      "type": "revenue_boost",
+      "multiplier": 3.0,
+      "duration_days": 3,
+      "weight": 10
+    },
+    {
+      "id": "inspection",
+      "name": "위생 점검",
+      "desc": "{business} 위생 점검 적발. 벌금 납부.",
+      "type": "penalty_cash",
+      "amount_pct_of_daily": 10,
+      "weight": 15,
+      "category_filter": "food"
+    },
+    {
+      "id": "tax_audit",
+      "name": "세무 조사",
+      "desc": "{business} 세무 조사 대상. 추징금 납부.",
+      "type": "penalty_cash",
+      "amount_pct_of_daily": 20,
+      "weight": 10
+    },
+    {
+      "id": "best_employee",
+      "name": "우수 직원 채용",
+      "desc": "{business}에 우수 직원이 합류했습니다!",
+      "type": "free_employee",
+      "weight": 15
+    }
+  ]
+}

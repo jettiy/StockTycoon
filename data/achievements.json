@@ -188,6 +188,33 @@
       "type": "autotrade_slots",
       "target": 4,
       "reward_cash": 5000000
+    },
+    {
+      "id": "first_business",
+      "name": "사업가 데뷔",
+      "desc": "첫 사업 구매",
+      "category": "business",
+      "type": "business_count",
+      "target": 1,
+      "reward_cash": 500000
+    },
+    {
+      "id": "tycoon",
+      "name": "재벌",
+      "desc": "4개 카테고리 모두 사업 보유",
+      "category": "business",
+      "type": "business_categories",
+      "target": 4,
+      "reward_cash": 100000000
+    },
+    {
+      "id": "empire_10",
+      "name": "사업 제국",
+      "desc": "사업 총 10개 보유",
+      "category": "business",
+      "type": "business_count",
+      "target": 10,
+      "reward_cash": 1000000000
     }
   ]
 }

@@ -71,6 +71,12 @@ func _process_tick() -> void:
 		_total_interest += interest
 		passive_income_earned.emit(interest, "이자")
 
+	# 4. 사업 수익
+	var business_rev := BusinessManager.calc_tick_revenue()
+	if business_rev > 0:
+		total_income += business_rev
+		passive_income_earned.emit(business_rev, "사업")
+
 	if total_income > 0:
 		GameManager.add_cash(total_income)
 		_last_income = total_income

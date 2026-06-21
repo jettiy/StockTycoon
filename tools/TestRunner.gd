@@ -249,6 +249,61 @@ func _run_all_tests() -> void:
 	StoryManager.check_triggers()
 	_pass()  # 에러 없이 실행되면 통과
 
+	# 26. 사업 데이터 로드
+	current_test = "사업 데이터 18종 로드"
+	var biz_defs = BusinessManager.get_all_defs()
+	if biz_defs.size() == 18:
+		_pass()
+	else:
+		_fail("사업 수 = %d" % biz_defs.size())
+
+	# 27. 사업 구매
+	current_test = "사업 구매"
+	var biz_r = BusinessManager.purchase("food_truck")
+	if biz_r.get("success"):
+		_pass()
+	else:
+		_fail("구매 실패: %s" % str(biz_r.get("reason")))
+
+	# 28. 사업 업그레이드
+	current_test = "사업 업그레이드"
+	# 현금 추가
+	GameManager.add_cash(10000000)
+	var up_r = BusinessManager.upgrade("food_truck")
+	if up_r.get("success"):
+		_pass()
+	else:
+		_fail("업그레이드 실패: %s" % str(up_r.get("reason")))
+
+	# 29. 직원 고용
+	current_test = "직원 고용"
+	var emp_r = BusinessManager.hire_employee("food_truck")
+	if emp_r.get("success"):
+		_pass()
+	else:
+		_fail("고용 실패: %s" % str(emp_r.get("reason")))
+
+	# 30. 사업 수익 계산
+	current_test = "사업 수익 계산"
+	var biz_rev = BusinessManager.calc_tick_revenue()
+	if biz_rev > 0:
+		_pass()
+	else:
+		_fail("수익 = %s" % str(biz_rev))
+
+	# 31. 사업 일일 정산
+	current_test = "사업 일일 정산"
+	var daily_biz = BusinessManager.pay_daily_revenue()
+	if daily_biz["total"] > 0:
+		_pass()
+	else:
+		_fail("일일 수익 = %s" % str(daily_biz.get("total")))
+
+	# 32. 사업 이벤트 롤
+	current_test = "사업 이벤트 롤"
+	BusinessManager.roll_daily_events()
+	_pass()  # 에러 없이 실행되면 통과
+
 func _pass() -> void:
 	passed += 1
 	print("  [통과] %s" % current_test)
