@@ -216,6 +216,13 @@ func advance_day() -> Dictionary:
 	if dividends > 0:
 		result["dividends"] = dividends
 
+	# 일일 임대 수익 + 이자 정산 (방치형 핵심)
+	var passive := PassiveIncomeManager.pay_daily_rental_interest()
+	if passive.has("rental") and passive["rental"] > 0:
+		result["rental"] = passive["rental"]
+	if passive.has("interest") and passive["interest"] > 0:
+		result["interest"] = passive["interest"]
+
 	# 파산 방지 지원금
 	var bailout_thresh: float = _balance.get("difficulty", {}).get("bailout_threshold", 500000)
 	var bailout_amt: float = _balance.get("difficulty", {}).get("bailout_amount", 2000000)

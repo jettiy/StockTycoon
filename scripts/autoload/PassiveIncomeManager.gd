@@ -142,7 +142,41 @@ func _apply_cap(amount: float, cap_pct: float) -> float:
 	var tick_cap := daily_cap / _game_accel
 	return min(amount, tick_cap)
 
-## 하루 경과 시 일괄 배당 지급 (큰 금액, 정기적)
+## 하루 경과 시 임대 수익 + 이자 정산 (advance_day에서 호출)
+func pay_daily_rental_interest() -> Dictionary:
+	var result := {"rental": 0.0, "interest": 0.0}
+	
+	# 임대 수익 (주거 등급)
+	var house: Dictionary = GameManager.get_current_house()
+	var house_id: String = house.get("id", "gosiwon")
+	var rental_map: Dictionary = _config.get("rental_income_per_day", {})
+	if rental_map.has(house_id):
+		var daily_rental: float = float(rental_map[house_id])
+		if daily_rental > 0:
+			# 캡 적용
+			var net_worth := GameManager.get_net_worth()
+			if net_worth > 0:
+				var cap := net_worth * _rental_cap_pct
+				daily_rental = min(daily_rental, cap)
+			GameManager.add_cash(daily_rental)
+			_total_rental += daily_rental
+			result["rental"] = daily_rental
+	
+	# 현금 이자
+	var cash := GameManager.get_cash()
+	if cash > 0:
+		var daily_interest: float = cash * _interest_rate
+		if daily_interest > 0:
+			# 캡 적용
+			var net_worth := GameManager.get_net_worth()
+			if net_worth > 0:
+				var cap := net_worth * _interest_cap_pct
+				daily_interest = min(daily_interest, cap)
+			GameManager.add_cash(daily_interest)
+			_total_interest += daily_interest
+			result["interest"] = daily_interest
+	
+	return result
 func pay_daily_dividends() -> float:
 	var total: float = 0.0
 

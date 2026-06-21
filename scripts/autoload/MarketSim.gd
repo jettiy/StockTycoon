@@ -95,8 +95,14 @@ func _tick() -> void:
 		# 1. 랜덤워크 (정규분포 근사)
 		var random_change: float = _rng.randfn(0.0, 1.0) * stock["volatility"]
 
-		# 2. 트렌드 성분
-		var trend_change: float = stock["trend"]
+		# 2. 트렌드 성분 — 사이클에 따라 동적 부여
+		# 기본 trend는 미세 상승 편향 (인플레이션 반영)
+		# 강세장에서는 가속, 약세장에서는 마이너스 전환
+		var base_trend: float = float(stock["trend"])
+		var dynamic_trend: float = base_trend * (0.5 + market_cycle * 1.5)
+		# 약세장에서는 하락 트렌드
+		if market_cycle < -0.2:
+			dynamic_trend -= base_trend * absf(market_cycle) * 2.0
 
 		# 3. 마켓 사이클 영향 (코인 > 성장주 > 블루칩)
 		var cycle_weight := 0.3
@@ -114,7 +120,7 @@ func _tick() -> void:
 			_event_multipliers[stock_id] = lerp(_event_multipliers[stock_id], 1.0, 0.1)
 
 		# 합산
-		var total_change: float = random_change + trend_change + cycle_change + event_change
+		var total_change: float = random_change + dynamic_trend + cycle_change + event_change
 		var new_price: float = float(stock["price"]) * (1.0 + total_change)
 
 		# 하한선 (기준가 10%까지)
