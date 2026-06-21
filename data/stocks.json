@@ -2,8 +2,8 @@
   "stocks": [
     {
       "id": "samsung",
-      "name": "삼전전자",
-      "ticker": "SAMS",
+      "name": "삼성전자",
+      "ticker": "005930",
       "category": "korea",
       "tier": "blue",
       "price": 75000,
@@ -16,8 +16,8 @@
     },
     {
       "id": "skhynix",
-      "name": "스케하이닉스",
-      "ticker": "SKHX",
+      "name": "SK하이닉스",
+      "ticker": "000660",
       "category": "korea",
       "tier": "blue",
       "price": 180000,
@@ -31,7 +31,7 @@
     {
       "id": "celltrion",
       "name": "셀트리온제약",
-      "ticker": "CTRN",
+      "ticker": "068270",
       "category": "korea",
       "tier": "blue",
       "price": 220000,
@@ -45,7 +45,7 @@
     {
       "id": "kakaobank",
       "name": "카카오뱅크",
-      "ticker": "KBNK",
+      "ticker": "323410",
       "category": "korea",
       "tier": "growth",
       "price": 35000,
@@ -59,7 +59,7 @@
     {
       "id": "baemin",
       "name": "배달의민족",
-      "ticker": "BAEM",
+      "ticker": "367530",
       "category": "korea",
       "tier": "growth",
       "price": 45000,
@@ -72,8 +72,8 @@
     },
     {
       "id": "apple",
-      "name": "애플텍",
-      "ticker": "APLT",
+      "name": "애플",
+      "ticker": "AAPL",
       "category": "usa",
       "tier": "blue",
       "price": 290000,
@@ -86,8 +86,8 @@
     },
     {
       "id": "tesla",
-      "name": "테슬라모터",
-      "ticker": "TSLM",
+      "name": "테슬라",
+      "ticker": "TSLA",
       "category": "usa",
       "tier": "growth",
       "price": 320000,
@@ -100,8 +100,8 @@
     },
     {
       "id": "nvidia",
-      "name": "엔비디칩",
-      "ticker": "NVDC",
+      "name": "엔비디아",
+      "ticker": "NVDA",
       "category": "usa",
       "tier": "growth",
       "price": 180000,
@@ -114,7 +114,7 @@
     },
     {
       "id": "microsoft",
-      "name": "마이크로소프",
+      "name": "마이크로소프트",
       "ticker": "MSFT",
       "category": "usa",
       "tier": "blue",
@@ -128,7 +128,7 @@
     },
     {
       "id": "meta",
-      "name": "메타버스북",
+      "name": "메타",
       "ticker": "META",
       "category": "usa",
       "tier": "blue",
@@ -142,7 +142,7 @@
     },
     {
       "id": "amazon",
-      "name": "아마존딜리버리",
+      "name": "아마존",
       "ticker": "AMZN",
       "category": "usa",
       "tier": "blue",
@@ -156,8 +156,8 @@
     },
     {
       "id": "google",
-      "name": "구글검색",
-      "ticker": "GOOG",
+      "name": "구글",
+      "ticker": "GOOGL",
       "category": "usa",
       "tier": "blue",
       "price": 280000,

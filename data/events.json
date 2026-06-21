@@ -2,7 +2,7 @@
   "news": [
     {
       "id": "samsung_ai_breakthrough",
-      "title": "삼전전자, 차세대 AI 반도체 발표",
+      "title": "삼성전자, 차세대 AI 반도체 발표",
       "desc": "혁신적인 2nm 공정 AI 칩 발표. 시장 들끓어오름.",
       "stock_ids": ["samsung", "skhynix"],
       "impact": 0.6,
@@ -11,7 +11,7 @@
     },
     {
       "id": "nvidia_earnings_beat",
-      "title": "엔비디칩, 분기 실적 대폭 상회",
+      "title": "엔비디아, 분기 실적 대폭 상회",
       "desc": "AI 수요 폭증으로 예상치 200% 초과 달성.",
       "stock_ids": ["nvidia", "apple", "microsoft"],
       "impact": 0.8,
@@ -20,7 +20,7 @@
     },
     {
       "id": "tesla_robo_taxi",
-      "title": "테슬라모터, 로보택시 전국 확대 발표",
+      "title": "테슬라, 로보택시 전국 확대 발표",
       "desc": "자율주행 레벨5 승인. 주가 급등 예상.",
       "stock_ids": ["tesla"],
       "impact": 0.7,
@@ -56,7 +56,7 @@
     },
     {
       "id": "apple_vision_pro2",
-      "title": "애플텍, 비전 프로 2세대 발표",
+      "title": "애플, 비전 프로 2세대 발표",
       "desc": "대중화 가격대 MR 기기. 사전 예약 500만대.",
       "stock_ids": ["apple", "google", "meta"],
       "impact": 0.5,
@@ -83,7 +83,7 @@
     },
     {
       "id": "amazon_holiday_sales",
-      "title": "아마존딜리버리, 연말 시즌 매출 신기록",
+      "title": "아마존, 연말 시즌 매출 신기록",
       "desc": "블랙프라이데이 사상 최대 규모 판매.",
       "stock_ids": ["amazon"],
       "impact": 0.35,

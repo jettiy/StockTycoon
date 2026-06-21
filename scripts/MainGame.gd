@@ -15,8 +15,8 @@ const COL_TEXT_BRIGHT := Color(0.95, 0.95, 0.97, 1)
 const COL_PANEL := Color(0.094, 0.098, 0.110, 1)
 const COL_PANEL_LIGHT := Color(0.122, 0.126, 0.138, 1)
 
-const CATEGORY_FILTERS := ["전체", "한국", "미국", "코인"]
-const CATEGORY_MAP := {"전체": "", "한국": "korea", "미국": "usa", "코인": "coin"}
+const CATEGORY_FILTERS := ["한국", "미국", "코인"]
+const CATEGORY_MAP := {"한국": "korea", "미국": "usa", "코인": "coin"}
 const VIEW_TABS := ["시장", "자동매매", "자산", "NPC", "진행"]
 
 # ─── 씬 노드 참조 (@onready로 씬 트리에서 자동 연결) ───
@@ -46,7 +46,7 @@ var _stock_scroll: ScrollContainer
 var _stock_list: VBoxContainer
 var _detail_panel: PanelContainer  # 오른쪽 상세 패널 (기존 _trade_panel 대체)
 var _stock_rows: Dictionary = {}
-var _current_category: String = ""
+var _current_category: String = "korea"
 var _selected_stock: String = ""
 
 # 상세 패널 위젯
@@ -67,6 +67,8 @@ var _trade_total_label: Label
 var _autotrade_slots: Array = []
 
 # 라이프
+var _asset_subtab: String = "주거"
+var _asset_subtabs: HBoxContainer
 var _asset_housing_container: VBoxContainer
 var _asset_vehicle_container: VBoxContainer
 
@@ -605,6 +607,22 @@ func _build_asset_view() -> void:
 	_asset_view.visible = false
 	_content.add_child(_asset_view)
 
+	# 서브탭 버튼
+	_asset_subtabs = HBoxContainer.new()
+	_asset_subtabs.add_theme_constant_override("separation", 4)
+	_asset_view.add_child(_asset_subtabs)
+
+	for tab_name in ["주거", "차량", "사업", "요약"]:
+		var btn := Button.new()
+		btn.text = tab_name
+		btn.custom_minimum_size = Vector2(90, 34)
+		btn.add_theme_font_size_override("font_size", 14)
+		btn.set_meta("subtab", tab_name)
+		btn.pressed.connect(_on_asset_subtab.bind(tab_name))
+		_asset_subtabs.add_child(btn)
+	_update_asset_subtab_styles()
+
+	# 스크롤 콘텐츠
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_asset_view.add_child(scroll)
@@ -614,57 +632,62 @@ func _build_asset_view() -> void:
 	inner.add_theme_constant_override("separation", 8)
 	scroll.add_child(inner)
 
-	# ── 자동수익 분석 카드 ──
-	var bd_header := Label.new()
-	bd_header.text = "  자동수익 분석"
-	bd_header.add_theme_font_size_override("font_size", 20)
-	bd_header.add_theme_color_override("font_color", COL_ACCENT)
-	inner.add_child(bd_header)
-
-	_asset_breakdown_container = VBoxContainer.new()
-	_asset_breakdown_container.add_theme_constant_override("separation", 2)
-	inner.add_child(_asset_breakdown_container)
-
-	# ── 주거 ──
-	var hh := Label.new()
-	hh.text = "  주거"
-	hh.add_theme_font_size_override("font_size", 20)
-	hh.add_theme_color_override("font_color", COL_ACCENT)
-	inner.add_child(hh)
-
+	# 각 섹션 컨테이너 (서브탭으로 show/hide)
 	_asset_housing_container = VBoxContainer.new()
-	_asset_housing_container.add_theme_constant_override("separation", 3)
+	_asset_housing_container.add_theme_constant_override("separation", 4)
 	inner.add_child(_asset_housing_container)
 
-	# ── 차량 ──
-	var vh := Label.new()
-	vh.text = "  차량"
-	vh.add_theme_font_size_override("font_size", 20)
-	vh.add_theme_color_override("font_color", COL_ACCENT)
-	inner.add_child(vh)
-
 	_asset_vehicle_container = VBoxContainer.new()
-	_asset_vehicle_container.add_theme_constant_override("separation", 3)
+	_asset_vehicle_container.add_theme_constant_override("separation", 4)
 	inner.add_child(_asset_vehicle_container)
-
-	# ── 사업 운영 ──
-	var bh := Label.new()
-	bh.text = "  사업 운영"
-	bh.add_theme_font_size_override("font_size", 20)
-	bh.add_theme_color_override("font_color", COL_ACCENT)
-	inner.add_child(bh)
 
 	_asset_business_container = VBoxContainer.new()
 	_asset_business_container.add_theme_constant_override("separation", 4)
 	inner.add_child(_asset_business_container)
 
+	_asset_breakdown_container = VBoxContainer.new()
+	_asset_breakdown_container.add_theme_constant_override("separation", 4)
+	inner.add_child(_asset_breakdown_container)
+
+	_show_asset_subtab("주거")
+
+
+func _on_asset_subtab(tab_name: String) -> void:
+	_show_asset_subtab(tab_name)
+
+
+func _show_asset_subtab(tab_name: String) -> void:
+	_asset_subtab = tab_name
+	_asset_housing_container.visible = (tab_name == "주거")
+	_asset_vehicle_container.visible = (tab_name == "차량")
+	_asset_business_container.visible = (tab_name == "사업")
+	_asset_breakdown_container.visible = (tab_name == "요약")
+	_update_asset_subtab_styles()
 	_refresh_asset_view()
+
+
+func _update_asset_subtab_styles() -> void:
+	for child in _asset_subtabs.get_children():
+		if child is Button and child.has_meta("subtab"):
+			var active: bool = child.get_meta("subtab") == _asset_subtab
+			if active:
+				child.add_theme_stylebox_override("normal", _flat(COL_ACCENT, 4))
+				child.add_theme_color_override("font_color", Color.WHITE)
+			else:
+				child.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+				child.add_theme_color_override("font_color", COL_TEXT_DIM)
 
 
 func _refresh_asset_view() -> void:
 	# 주거
 	for c in _asset_housing_container.get_children():
 		c.queue_free()
+	if _asset_subtab == "주거":
+		var hh := Label.new()
+		hh.text = "  주거"
+		hh.add_theme_font_size_override("font_size", 20)
+		hh.add_theme_color_override("font_color", COL_ACCENT)
+		_asset_housing_container.add_child(hh)
 	var cur_house: String = GameManager.player["house"]
 	for i in range(GameManager.get_housing_list().size()):
 		var h: Dictionary = GameManager.get_housing_list()[i]
@@ -675,6 +698,12 @@ func _refresh_asset_view() -> void:
 	# 차량
 	for c in _asset_vehicle_container.get_children():
 		c.queue_free()
+	if _asset_subtab == "차량":
+		var vh := Label.new()
+		vh.text = "  차량"
+		vh.add_theme_font_size_override("font_size", 20)
+		vh.add_theme_color_override("font_color", COL_ACCENT)
+		_asset_vehicle_container.add_child(vh)
 	var cur_veh: String = GameManager.player["vehicle"]
 	for i in range(GameManager.get_vehicle_list().size()):
 		var v: Dictionary = GameManager.get_vehicle_list()[i]
@@ -683,8 +712,25 @@ func _refresh_asset_view() -> void:
 		_asset_vehicle_container.add_child(_life_row(v, "vehicle", is_cur, locked, i))
 
 	# 사업
+	for c in _asset_business_container.get_children():
+		c.queue_free()
+	if _asset_subtab == "사업":
+		var bh := Label.new()
+		bh.text = "  사업 운영"
+		bh.add_theme_font_size_override("font_size", 20)
+		bh.add_theme_color_override("font_color", COL_ACCENT)
+		_asset_business_container.add_child(bh)
 	_refresh_business_view()
-	# 자동수익 분석
+
+	# 요약 (자동수익 분석)
+	for c in _asset_breakdown_container.get_children():
+		c.queue_free()
+	if _asset_subtab == "요약":
+		var bdh := Label.new()
+		bdh.text = "  자동수익 분석"
+		bdh.add_theme_font_size_override("font_size", 20)
+		bdh.add_theme_color_override("font_color", COL_ACCENT)
+		_asset_breakdown_container.add_child(bdh)
 	_refresh_breakdown()
 
 
@@ -758,9 +804,7 @@ func _refresh_breakdown() -> void:
 
 ## 사업 목록 갱신
 func _refresh_business_view() -> void:
-	for c in _asset_business_container.get_children():
-		c.queue_free()
-
+	# 컨테이너는 _refresh_asset_view에서 clear됨
 	var defs: Array = BusinessManager.get_all_defs()
 	for def in defs:
 		var card := _create_business_card(def)
