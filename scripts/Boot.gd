@@ -62,7 +62,7 @@ func _build_ui() -> void:
 
 	_container = VBoxContainer.new()
 	_container.set_anchors_preset(Control.PRESET_CENTER)
-	_container.custom_minimum_size = Vector2(500, 400)
+	_container.custom_minimum_size = Vector2(600, 450)
 	_container.alignment = BoxContainer.ALIGNMENT_CENTER
 	_container.add_theme_constant_override("separation", 16)
 	add_child(_container)
@@ -70,14 +70,14 @@ func _build_ui() -> void:
 	var title := Label.new()
 	title.text = "주식잡스"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 72)
+	title.add_theme_font_size_override("font_size", 84)
 	title.add_theme_color_override("font_color", COL_ACCENT)
 	_container.add_child(title)
 
 	var subtitle := Label.new()
 	subtitle.text = "Stock Tycoon"
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 20)
+	subtitle.add_theme_font_size_override("font_size", 28)
 	subtitle.add_theme_color_override("font_color", COL_TEXT_DIM)
 	_container.add_child(subtitle)
 
@@ -86,7 +86,7 @@ func _build_ui() -> void:
 	var desc := Label.new()
 	desc.text = "증권가에 취직한 청년의 주식 투자 인생"
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc.add_theme_font_size_override("font_size", 14)
+	desc.add_theme_font_size_override("font_size", 16)
 	desc.add_theme_color_override("font_color", COL_TEXT_DIM)
 	_container.add_child(desc)
 
@@ -106,7 +106,7 @@ func _build_ui() -> void:
 	var ver := Label.new()
 	ver.text = "v0.2.0 — Phase 2"
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ver.add_theme_font_size_override("font_size", 11)
+	ver.add_theme_font_size_override("font_size", 13)
 	ver.add_theme_color_override("font_color", COL_TEXT_DIM)
 	_container.add_child(ver)
 
@@ -138,7 +138,7 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 
 	_popup = PanelContainer.new()
 	_popup.set_anchors_preset(Control.PRESET_CENTER)
-	_popup.custom_minimum_size = Vector2(450, 300)
+	_popup.custom_minimum_size = Vector2(550, 350)
 	_popup.add_theme_stylebox_override("panel", _style_border(COL_PANEL, COL_ACCENT, 12))
 	_popup.z_index = 51
 	add_child(_popup)
@@ -156,7 +156,7 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 	var title := Label.new()
 	title.text = "오프라인 보상"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", COL_GOLD)
 	vbox.add_child(title)
 
@@ -166,7 +166,7 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 	var time_label := Label.new()
 	time_label.text = "부재 시간: %d시간 %d분" % [int(hours), mins]
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	time_label.add_theme_font_size_override("font_size", 14)
+	time_label.add_theme_font_size_override("font_size", 17)
 	time_label.add_theme_color_override("font_color", COL_TEXT_DIM)
 	vbox.add_child(time_label)
 
@@ -176,7 +176,7 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 	var cash_label := Label.new()
 	cash_label.text = "+ %s" % _fmt_won(rewards["cash"])
 	cash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	cash_label.add_theme_font_size_override("font_size", 28)
+	cash_label.add_theme_font_size_override("font_size", 32)
 	cash_label.add_theme_color_override("font_color", COL_UP)
 	vbox.add_child(cash_label)
 
@@ -185,7 +185,7 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 		var auto_label := Label.new()
 		auto_label.text = "자동매매: %d건 실행" % rewards["auto_trades"]
 		auto_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		auto_label.add_theme_font_size_override("font_size", 14)
+		auto_label.add_theme_font_size_override("font_size", 17)
 		auto_label.add_theme_color_override("font_color", COL_ACCENT)
 		vbox.add_child(auto_label)
 
@@ -194,8 +194,8 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 	# 수령 버튼
 	var claim_btn := Button.new()
 	claim_btn.text = "수령하고 계속하기"
-	claim_btn.custom_minimum_size = Vector2(300, 44)
-	claim_btn.add_theme_font_size_override("font_size", 16)
+	claim_btn.custom_minimum_size = Vector2(350, 52)
+	claim_btn.add_theme_font_size_override("font_size", 19)
 	claim_btn.add_theme_color_override("font_color", COL_UP)
 	claim_btn.add_theme_stylebox_override("normal", _style_border(COL_PANEL, COL_UP, 6))
 	claim_btn.add_theme_stylebox_override("hover", _style_border(Color(0.10, 0.15, 0.10, 1), COL_UP, 6))
@@ -210,8 +210,8 @@ func _show_offline_popup(rewards: Dictionary) -> void:
 func _make_button(text: String, color: Color) -> Button:
 	var btn := Button.new()
 	btn.text = text
-	btn.custom_minimum_size = Vector2(300, 50)
-	btn.add_theme_font_size_override("font_size", 20)
+	btn.custom_minimum_size = Vector2(350, 56)
+	btn.add_theme_font_size_override("font_size", 22)
 	btn.add_theme_stylebox_override("normal", _style_border(COL_PANEL, color, 6))
 	btn.add_theme_stylebox_override("hover", _style_border(color, color, 6))
 	btn.add_theme_stylebox_override("pressed", _style_border(color, color, 6))

@@ -124,8 +124,8 @@ func _init_static_ui() -> void:
 	for tab_name in VIEW_TABS:
 		var btn := Button.new()
 		btn.text = tab_name
-		btn.custom_minimum_size = Vector2(100, 34)
-		btn.add_theme_font_size_override("font_size", 14)
+		btn.custom_minimum_size = Vector2(120, 42)
+		btn.add_theme_font_size_override("font_size", 17)
 		btn.set_meta("view", tab_name)
 		btn.pressed.connect(_on_view_tab_pressed.bind(tab_name))
 		_update_view_tab_style(btn, tab_name == VIEW_TABS[0])
@@ -138,7 +138,7 @@ func _init_static_ui() -> void:
 	var phase_label := Label.new()
 	phase_label.name = "PhaseLabel"
 	phase_label.text = "시장: 중립"
-	phase_label.add_theme_font_size_override("font_size", 13)
+	phase_label.add_theme_font_size_override("font_size", 16)
 	phase_label.add_theme_color_override("font_color", COL_TEXT_DIM)
 	_view_tabs.add_child(phase_label)
 
@@ -146,8 +146,8 @@ func _init_static_ui() -> void:
 	for cat in CATEGORY_FILTERS:
 		var btn := Button.new()
 		btn.text = cat
-		btn.custom_minimum_size = Vector2(70, 28)
-		btn.add_theme_font_size_override("font_size", 13)
+		btn.custom_minimum_size = Vector2(80, 34)
+		btn.add_theme_font_size_override("font_size", 15)
 		btn.set_meta("category", cat)
 		btn.pressed.connect(_on_cat_pressed.bind(cat))
 		_update_cat_style(btn, cat == CATEGORY_FILTERS[0])
@@ -177,7 +177,7 @@ func _build_market_view() -> void:
 
 	_stock_list = VBoxContainer.new()
 	_stock_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_stock_list.add_theme_constant_override("separation", 2)
+	_stock_list.add_theme_constant_override("separation", 4)
 	_stock_scroll.add_child(_stock_list)
 
 	_build_trade_panel()
@@ -187,7 +187,7 @@ func _build_market_view() -> void:
 func _build_trade_panel() -> void:
 	_trade_panel = PanelContainer.new()
 	_trade_panel.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 6))
-	_trade_panel.custom_minimum_size = Vector2(0, 90)
+	_trade_panel.custom_minimum_size = Vector2(0, 100)
 	_trade_panel.visible = false
 	_market_view.add_child(_trade_panel)
 
@@ -198,14 +198,14 @@ func _build_trade_panel() -> void:
 	var info := VBoxContainer.new()
 	info.add_theme_constant_override("separation", 3)
 	_trade_stock_name = Label.new()
-	_trade_stock_name.add_theme_font_size_override("font_size", 18)
+	_trade_stock_name.add_theme_font_size_override("font_size", 22)
 	_trade_stock_name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 	info.add_child(_trade_stock_name)
 	_trade_price_label = Label.new()
-	_trade_price_label.add_theme_font_size_override("font_size", 14)
+	_trade_price_label.add_theme_font_size_override("font_size", 17)
 	info.add_child(_trade_price_label)
 	_trade_holding_label = Label.new()
-	_trade_holding_label.add_theme_font_size_override("font_size", 12)
+	_trade_holding_label.add_theme_font_size_override("font_size", 14)
 	_trade_holding_label.add_theme_color_override("font_color", COL_TEXT_DIM)
 	info.add_child(_trade_holding_label)
 	hbox.add_child(info)
@@ -229,7 +229,7 @@ func _build_trade_panel() -> void:
 	_trade_qty_edit.min_value = 1
 	_trade_qty_edit.max_value = 100000
 	_trade_qty_edit.value = 1
-	_trade_qty_edit.custom_minimum_size = Vector2(100, 36)
+	_trade_qty_edit.custom_minimum_size = Vector2(120, 42)
 	_trade_qty_edit.value_changed.connect(_on_qty_changed)
 	act.add_child(_trade_qty_edit)
 
@@ -243,16 +243,16 @@ func _build_trade_panel() -> void:
 
 	var buy := Button.new()
 	buy.text = "매수"
-	buy.custom_minimum_size = Vector2(70, 36)
-	buy.add_theme_font_size_override("font_size", 15)
+	buy.custom_minimum_size = Vector2(80, 42)
+	buy.add_theme_font_size_override("font_size", 18)
 	buy.add_theme_color_override("font_color", COL_UP)
 	buy.pressed.connect(_on_buy)
 	act.add_child(buy)
 
 	var sell := Button.new()
 	sell.text = "매도"
-	sell.custom_minimum_size = Vector2(70, 36)
-	sell.add_theme_font_size_override("font_size", 15)
+	sell.custom_minimum_size = Vector2(80, 42)
+	sell.add_theme_font_size_override("font_size", 18)
 	sell.add_theme_color_override("font_color", COL_DOWN)
 	sell.pressed.connect(_on_sell)
 	act.add_child(sell)
@@ -278,7 +278,7 @@ func _populate_stock_list() -> void:
 
 func _create_stock_row(stock: Dictionary) -> Control:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(0, 56)
+	btn.custom_minimum_size = Vector2(0, 72)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.add_theme_font_size_override("font_size", 14)
 	btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
@@ -293,19 +293,19 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	nb.add_theme_constant_override("separation", 1)
 	var name := Label.new()
 	name.text = stock["name"]
-	name.add_theme_font_size_override("font_size", 15)
+	name.add_theme_font_size_override("font_size", 18)
 	name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 	nb.add_child(name)
 	var meta := Label.new()
 	meta.text = "%s · %s" % [stock.get("ticker", ""), stock.get("sector", "")]
-	meta.add_theme_font_size_override("font_size", 11)
+	meta.add_theme_font_size_override("font_size", 13)
 	meta.add_theme_color_override("font_color", COL_TEXT_DIM)
 	nb.add_child(meta)
 	hbox.add_child(nb)
 
 	var cat := Label.new()
 	cat.text = _cat_tag(stock["category"])
-	cat.add_theme_font_size_override("font_size", 11)
+	cat.add_theme_font_size_override("font_size", 14)
 	cat.add_theme_color_override("font_color", _cat_color(stock["category"]))
 	cat.custom_minimum_size = Vector2(35, 0)
 	cat.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -315,7 +315,7 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	var spark_script := load("res://scripts/Sparkline.gd")
 	var spark := Control.new()
 	spark.set_script(spark_script)
-	spark.custom_minimum_size = Vector2(80, 40)
+	spark.custom_minimum_size = Vector2(100, 50)
 	spark.name = "Sparkline"
 	spark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	hbox.add_child(spark)
@@ -326,7 +326,7 @@ func _create_stock_row(stock: Dictionary) -> Control:
 
 	var hl := Label.new()
 	hl.name = "HoldLabel"
-	hl.add_theme_font_size_override("font_size", 12)
+	hl.add_theme_font_size_override("font_size", 14)
 	hl.add_theme_color_override("font_color", COL_TEXT_DIM)
 	hl.custom_minimum_size = Vector2(70, 0)
 	hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -336,9 +336,9 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	var pl := Label.new()
 	pl.name = "PriceLabel"
 	pl.text = _fmt_price(stock["price"])
-	pl.add_theme_font_size_override("font_size", 15)
+	pl.add_theme_font_size_override("font_size", 18)
 	pl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	pl.custom_minimum_size = Vector2(120, 0)
+	pl.custom_minimum_size = Vector2(140, 0)
 	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(pl)
@@ -346,9 +346,9 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	var cl := Label.new()
 	cl.name = "ChangeLabel"
 	cl.text = _fmt_change(stock.get("change_pct", 0.0))
-	cl.add_theme_font_size_override("font_size", 14)
+	cl.add_theme_font_size_override("font_size", 17)
 	cl.add_theme_color_override("font_color", _chg_color(stock.get("change_pct", 0.0)))
-	cl.custom_minimum_size = Vector2(90, 0)
+	cl.custom_minimum_size = Vector2(100, 0)
 	cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	cl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(cl)
@@ -368,7 +368,7 @@ func _build_autotrade_view() -> void:
 
 	var hdr := Label.new()
 	hdr.text = "  자동매매 슬롯 — 조건 설정 시 자동 거래 (오프라인에도 실행)"
-	hdr.add_theme_font_size_override("font_size", 13)
+	hdr.add_theme_font_size_override("font_size", 16)
 	hdr.add_theme_color_override("font_color", COL_TEXT_DIM)
 	_autotrade_view.add_child(hdr)
 
@@ -383,7 +383,7 @@ func _build_autotrade_view() -> void:
 func _create_at_slot(index: int) -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _flat(COL_PANEL, 6))
-	panel.custom_minimum_size = Vector2(0, 70)
+	panel.custom_minimum_size = Vector2(0, 80)
 
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 4)
@@ -393,7 +393,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	hdr.add_theme_constant_override("separation", 10)
 	var num := Label.new()
 	num.text = "  슬롯 %d" % (index + 1)
-	num.add_theme_font_size_override("font_size", 14)
+	num.add_theme_font_size_override("font_size", 16)
 	num.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 	hdr.add_child(num)
 	var sp := Control.new()
@@ -401,7 +401,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	hdr.add_child(sp)
 	var tog := Button.new()
 	tog.text = "OFF"
-	tog.custom_minimum_size = Vector2(60, 28)
+	tog.custom_minimum_size = Vector2(70, 34)
 	tog.name = "ToggleButton"
 	tog.pressed.connect(_on_at_toggle.bind(index))
 	hdr.add_child(tog)
@@ -415,7 +415,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	for s in MarketSim.get_all_stocks():
 		stock_opt.add_item("%s (%s)" % [s["name"], s["ticker"]])
 	stock_opt.name = "StockOption"
-	stock_opt.custom_minimum_size = Vector2(160, 30)
+	stock_opt.custom_minimum_size = Vector2(180, 36)
 	stock_opt.item_selected.connect(_on_at_stock.bind(index))
 	cfg.add_child(stock_opt)
 
@@ -423,7 +423,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	for key in AutoTradeManager.CONDITION_TYPES:
 		cond_opt.add_item(AutoTradeManager.CONDITION_TYPES[key])
 	cond_opt.name = "CondOption"
-	cond_opt.custom_minimum_size = Vector2(150, 30)
+	cond_opt.custom_minimum_size = Vector2(170, 36)
 	cond_opt.item_selected.connect(_on_at_cond.bind(index))
 	cfg.add_child(cond_opt)
 
@@ -433,7 +433,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	cv.step = 1000
 	cv.value = 50000
 	cv.name = "CondValue"
-	cv.custom_minimum_size = Vector2(120, 30)
+	cv.custom_minimum_size = Vector2(140, 36)
 	cv.value_changed.connect(_on_at_val.bind(index))
 	cfg.add_child(cv)
 
@@ -441,7 +441,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	act_opt.add_item("매수")
 	act_opt.add_item("매도")
 	act_opt.name = "ActionOption"
-	act_opt.custom_minimum_size = Vector2(70, 30)
+	act_opt.custom_minimum_size = Vector2(80, 36)
 	act_opt.item_selected.connect(_on_at_action.bind(index))
 	cfg.add_child(act_opt)
 
@@ -450,7 +450,7 @@ func _create_at_slot(index: int) -> PanelContainer:
 	qty.max_value = 100000
 	qty.value = 1
 	qty.name = "QtyValue"
-	qty.custom_minimum_size = Vector2(80, 30)
+	qty.custom_minimum_size = Vector2(90, 36)
 	qty.value_changed.connect(_on_at_qty.bind(index))
 	cfg.add_child(qty)
 
@@ -479,7 +479,7 @@ func _build_life_view() -> void:
 
 	var hh := Label.new()
 	hh.text = "  주거"
-	hh.add_theme_font_size_override("font_size", 18)
+	hh.add_theme_font_size_override("font_size", 20)
 	hh.add_theme_color_override("font_color", COL_ACCENT)
 	inner.add_child(hh)
 
@@ -489,7 +489,7 @@ func _build_life_view() -> void:
 
 	var vh := Label.new()
 	vh.text = "  차량"
-	vh.add_theme_font_size_override("font_size", 18)
+	vh.add_theme_font_size_override("font_size", 20)
 	vh.add_theme_color_override("font_color", COL_ACCENT)
 	inner.add_child(vh)
 
@@ -522,7 +522,7 @@ func _refresh_life_view() -> void:
 
 func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx: int) -> Control:
 	var btn := Button.new()
-	btn.custom_minimum_size = Vector2(0, 50)
+	btn.custom_minimum_size = Vector2(0, 60)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.add_theme_font_size_override("font_size", 14)
 
@@ -568,7 +568,7 @@ func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx:
 	if bt == "":
 		bt = "보너스 없음"
 	bonus.text = bt
-	bonus.add_theme_font_size_override("font_size", 12)
+	bonus.add_theme_font_size_override("font_size", 14)
 	bonus.add_theme_color_override("font_color", COL_TEXT_DIM)
 	bonus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	hbox.add_child(bonus)
@@ -582,7 +582,7 @@ func _life_row(item: Dictionary, type: String, is_cur: bool, locked: bool, _idx:
 		price.text = "기본"
 	else:
 		price.text = _fmt_won(item["price"])
-	price.add_theme_font_size_override("font_size", 14)
+	price.add_theme_font_size_override("font_size", 16)
 	price.custom_minimum_size = Vector2(160, 0)
 	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -983,8 +983,8 @@ func _build_npc_view() -> void:
 	# 세대교체 버튼 (결혼한 경우만)
 	_gen_button = Button.new()
 	_gen_button.text = "세대교체 (New Game+)"
-	_gen_button.custom_minimum_size = Vector2(0, 44)
-	_gen_button.add_theme_font_size_override("font_size", 15)
+	_gen_button.custom_minimum_size = Vector2(0, 52)
+	_gen_button.add_theme_font_size_override("font_size", 18)
 	_gen_button.add_theme_color_override("font_color", COL_GOLD)
 	_gen_button.pressed.connect(_on_generation_advance)
 	_npc_view.add_child(_gen_button)
@@ -1055,7 +1055,7 @@ func _create_npc_row(npc: Dictionary, type: String) -> Control:
 
 	var name := Label.new()
 	name.text = "  " + npc.get("name", "")
-	name.add_theme_font_size_override("font_size", 15)
+	name.add_theme_font_size_override("font_size", 18)
 	name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 	name_box.add_child(name)
 
