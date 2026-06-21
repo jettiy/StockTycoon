@@ -60,6 +60,7 @@ var _detail_avg_price: Label
 var _detail_eval_amount: Label
 var _detail_eval_pnl: Label
 var _detail_sparkline: Control
+var _detail_logo: TextureRect
 var _trade_qty_edit: SpinBox
 var _trade_total_label: Label
 
@@ -267,17 +268,36 @@ func _build_detail_panel(parent: VBoxContainer) -> void:
 	vbox.offset_bottom = -12
 	_detail_panel.add_child(vbox)
 
-	# 종목명
+	# 종목 로고 + 이름 (가로 배치)
+	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 12)
+	vbox.add_child(top_row)
+
+	# 로고
+	_detail_logo = TextureRect.new()
+	_detail_logo.custom_minimum_size = Vector2(64, 64)
+	_detail_logo.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	_detail_logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_detail_logo.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top_row.add_child(_detail_logo)
+
+	# 종목명 + 티커 (세로)
+	var name_box := VBoxContainer.new()
+	name_box.add_theme_constant_override("separation", 2)
+	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top_row.add_child(name_box)
+
 	_detail_name = Label.new()
 	_detail_name.add_theme_font_size_override("font_size", 22)
 	_detail_name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	vbox.add_child(_detail_name)
+	name_box.add_child(_detail_name)
 
 	# 티커 / 메타
 	_detail_ticker = Label.new()
 	_detail_ticker.add_theme_font_size_override("font_size", 14)
 	_detail_ticker.add_theme_color_override("font_color", COL_TEXT_DIM)
-	vbox.add_child(_detail_ticker)
+	name_box.add_child(_detail_ticker)
 
 	_detail_meta = Label.new()
 	_detail_meta.add_theme_font_size_override("font_size", 14)
@@ -434,6 +454,17 @@ func _create_stock_row(stock: Dictionary) -> Control:
 	var hbox := HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 10)
 	btn.add_child(hbox)
+
+	# 종목 로고 (있으면 이미지, 없으면 도트 아이콘)
+	var logo_tex := _get_stock_icon(stock["id"])
+	if logo_tex:
+		var logo_rect := TextureRect.new()
+		logo_rect.texture = logo_tex
+		logo_rect.custom_minimum_size = Vector2(48, 48)
+		logo_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		logo_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		logo_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		hbox.add_child(logo_rect)
 
 	var nb := VBoxContainer.new()
 	nb.add_theme_constant_override("separation", 1)
@@ -1252,6 +1283,19 @@ func _show_life_detail_popup(type: String, item_id: String) -> void:
 	btn_row.add_child(close_btn)
 
 
+## 종목 로고 획득 (PNG 우선, 없으면 IconGenerator)
+func _get_stock_icon(stock_id: String) -> Texture2D:
+	# 1. PNG 파일 확인
+	var png_path := "res://assets/images/stocks/stock_%s.png" % stock_id
+	if FileAccess.file_exists(png_path):
+		var img := Image.load_from_file(ProjectSettings.globalize_path(png_path))
+		if img:
+			return ImageTexture.create_from_image(img)
+	# 2. IconGenerator 도트 아이콘
+	var icon_gen := IconGenerator.new()
+	return icon_gen.make_stock_logo(stock_id, 48)
+
+
 ## 주거/차량 아이콘 획득
 func _get_life_icon(type: String, item_id: String) -> Texture2D:
 	# 1. PNG 파일이 있으면 로드
@@ -1366,10 +1410,16 @@ func _update_detail_panel() -> void:
 		_detail_avg_price.text = ""
 		_detail_eval_amount.text = ""
 		_detail_eval_pnl.text = ""
+		if _detail_logo:
+			_detail_logo.texture = null
 		return
 	var s: Dictionary = MarketSim.get_stock(_selected_stock)
 	if s.is_empty():
 		return
+	# 로고 갱신
+	if _detail_logo:
+		var tex := _get_stock_icon(_selected_stock)
+		_detail_logo.texture = tex
 	_detail_name.text = s["name"]
 	_detail_ticker.text = s.get("ticker", "")
 	_detail_meta.text = "%s / %s" % [_cat_tag_kr(s.get("category", "")), s.get("sector", "")]
