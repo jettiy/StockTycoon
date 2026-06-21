@@ -128,8 +128,6 @@ func _connect_signals() -> void:
 	GameManager.salary_paid.connect(_on_salary_paid)
 	MarketSim.market_tick.connect(_on_market_tick)
 	AutoTradeManager.auto_trade_executed.connect(_on_auto_trade_executed)
-	# 시간 컨트롤 버튼
-	_pause_btn.pressed.connect(_on_pause_toggle)
 	# 자동 시간 흐름 시그널
 	GameClockManager.day_advanced.connect(_on_clock_day_advanced)
 	GameClockManager.time_changed.connect(_on_time_changed)
