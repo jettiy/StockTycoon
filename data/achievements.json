@@ -1,0 +1,193 @@
+{
+  "achievements": [
+    {
+      "id": "first_trade",
+      "name": "첫 거래",
+      "desc": "처음으로 주식을 매수했습니다",
+      "category": "trading",
+      "type": "total_trades",
+      "target": 1,
+      "reward_cash": 100000
+    },
+    {
+      "id": "trade_100",
+      "name": "상습 거래자",
+      "desc": "누적 100회 거래 달성",
+      "category": "trading",
+      "type": "total_trades",
+      "target": 100,
+      "reward_cash": 5000000
+    },
+    {
+      "id": "trade_1000",
+      "name": "고질적 투자자",
+      "desc": "누적 1,000회 거래 달성",
+      "category": "trading",
+      "type": "total_trades",
+      "target": 1000,
+      "reward_cash": 50000000
+    },
+    {
+      "id": "first_million",
+      "name": "첫 100만원",
+      "desc": "순자산 100만원 달성",
+      "category": "wealth",
+      "type": "net_worth",
+      "target": 1000000,
+      "reward_cash": 0
+    },
+    {
+      "id": "first_100m",
+      "name": "억만장자",
+      "desc": "순자산 1억 달성",
+      "category": "wealth",
+      "type": "net_worth",
+      "target": 100000000,
+      "reward_cash": 10000000
+    },
+    {
+      "id": "first_1b",
+      "name": "십억장자",
+      "desc": "순자산 10억 달성",
+      "category": "wealth",
+      "type": "net_worth",
+      "target": 1000000000,
+      "reward_cash": 100000000
+    },
+    {
+      "id": "first_10b",
+      "name": "백억 부자",
+      "desc": "순자산 100억 달성",
+      "category": "wealth",
+      "type": "net_worth",
+      "target": 10000000000,
+      "reward_cash": 1000000000
+    },
+    {
+      "id": "survive_crash",
+      "name": "위기를 기회로",
+      "desc": "약세장에서 10% 이상 수익 달성",
+      "category": "special",
+      "type": "bear_market_profit",
+      "target": 10,
+      "reward_cash": 5000000
+    },
+    {
+      "id": "first_dividend",
+      "name": "배당 투자자",
+      "desc": "첫 배당금 수령",
+      "category": "income",
+      "type": "total_dividends",
+      "target": 1,
+      "reward_cash": 0
+    },
+    {
+      "id": "dividend_10m",
+      "name": "배당 부자",
+      "desc": "누적 배당금 1천만원",
+      "category": "income",
+      "type": "total_dividends",
+      "target": 10000000,
+      "reward_cash": 5000000
+    },
+    {
+      "id": "first_house",
+      "name": "내 집 마련",
+      "desc": "첫 주거 업그레이드",
+      "category": "life",
+      "type": "house_level",
+      "target": 2,
+      "reward_cash": 1000000
+    },
+    {
+      "id": "penthouse",
+      "name": "펜트하우스",
+      "desc": "펜트하우스 입주",
+      "category": "life",
+      "type": "house_level",
+      "target": 6,
+      "reward_cash": 50000000
+    },
+    {
+      "id": "island_owner",
+      "name": "섬의 주인",
+      "desc": "섬 구매",
+      "category": "life",
+      "type": "house_level",
+      "target": 7,
+      "reward_cash": 100000000
+    },
+    {
+      "id": "first_car",
+      "name": "첫 차",
+      "desc": "첫 차량 구매",
+      "category": "life",
+      "type": "vehicle_level",
+      "target": 2,
+      "reward_cash": 500000
+    },
+    {
+      "id": "supercar",
+      "name": "슈퍼카 컬렉터",
+      "desc": "슈퍼카 구매",
+      "category": "life",
+      "type": "vehicle_level",
+      "target": 6,
+      "reward_cash": 20000000
+    },
+    {
+      "id": "married",
+      "name": "결혼",
+      "desc": "누군가와 결혼했습니다",
+      "category": "life",
+      "type": "married",
+      "target": 1,
+      "reward_cash": 10000000
+    },
+    {
+      "id": "rival_win",
+      "name": "라이벌 격파",
+      "desc": "라이벌과의 대결에서 승리",
+      "category": "special",
+      "type": "rival_wins",
+      "target": 1,
+      "reward_cash": 5000000
+    },
+    {
+      "id": "gen2",
+      "name": "2세대 개시",
+      "desc": "첫 세대교체 완료",
+      "category": "special",
+      "type": "generation",
+      "target": 2,
+      "reward_cash": 100000000
+    },
+    {
+      "id": "gen5",
+      "name": "가문의 영광",
+      "desc": "5세대 도달",
+      "category": "special",
+      "type": "generation",
+      "target": 5,
+      "reward_cash": 1000000000
+    },
+    {
+      "id": "all_stocks",
+      "name": "모든 종목 보유",
+      "desc": "16개 종목을 모두 보유한 적이 있음",
+      "category": "trading",
+      "type": "unique_holdings",
+      "target": 16,
+      "reward_cash": 10000000
+    },
+    {
+      "id": "autotrade_master",
+      "name": "자동매매 마스터",
+      "desc": "자동매매 4슬롯 모두 활성화",
+      "category": "trading",
+      "type": "autotrade_slots",
+      "target": 4,
+      "reward_cash": 5000000
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "daily_quests": [
+    {
+      "id": "d_trade3",
+      "name": "하루 3거래",
+      "desc": "오늘 주식을 3회 이상 매수/매도하세요",
+      "type": "trade_count",
+      "target": 3,
+      "reward_cash": 100000,
+      "reward_energy": 2
+    },
+    {
+      "id": "d_login",
+      "name": "출근 도장",
+      "desc": "오늘 하루를 경과하세요 (Space키)",
+      "type": "advance_day",
+      "target": 1,
+      "reward_cash": 50000,
+      "reward_energy": 1
+    },
+    {
+      "id": "d_profit_500k",
+      "name": "소소한 수익",
+      "desc": "오늘 매매로 50만원 이상 수익을 내세요",
+      "type": "daily_profit",
+      "target": 500000,
+      "reward_cash": 200000,
+      "reward_energy": 2
+    },
+    {
+      "id": "d_news3",
+      "name": "정보 수집",
+      "desc": "뉴스를 3회 이상 확인하세요",
+      "type": "news_check",
+      "target": 3,
+      "reward_cash": 50000,
+      "reward_energy": 3
+    },
+    {
+      "id": "d_autotrade",
+      "name": "자동매매 세팅",
+      "desc": "자동매매 슬롯 1개 이상 활성화",
+      "type": "autotrade_active",
+      "target": 1,
+      "reward_cash": 100000,
+      "reward_energy": 1
+    }
+  ],
+  "weekly_quests": [
+    {
+      "id": "w_trade15",
+      "name": "주간 트레이더",
+      "desc": "이번 주 15회 이상 거래하세요",
+      "type": "trade_count",
+      "target": 15,
+      "reward_cash": 1000000,
+      "reward_energy": 5
+    },
+    {
+      "id": "w_profit_5m",
+      "name": "주간 미션",
+      "desc": "이번 주 매매로 500만원 이상 수익",
+      "type": "daily_profit",
+      "target": 5000000,
+      "reward_cash": 3000000,
+      "reward_energy": 5
+    },
+    {
+      "id": "w_rank_up",
+      "name": "승진 도전",
+      "desc": "이번 주에 직급을 올리세요",
+      "type": "rank_up",
+      "target": 1,
+      "reward_cash": 5000000,
+      "reward_energy": 10
+    },
+    {
+      "id": "w_dividend",
+      "name": "배당 투자자",
+      "desc": "배당금 10만원 이상 수령",
+      "type": "dividend_earned",
+      "target": 100000,
+      "reward_cash": 500000,
+      "reward_energy": 3
+    }
+  ],
+  "monthly_quests": [
+    {
+      "id": "m_trade50",
+      "name": "월간 프로 트레이더",
+      "desc": "이번 달 50회 이상 거래",
+      "type": "trade_count",
+      "target": 50,
+      "reward_cash": 10000000,
+      "reward_energy": 10
+    },
+    {
+      "id": "m_networth_2x",
+      "name": "자산 성장",
+      "desc": "월초 대비 순자산 2배 달성",
+      "type": "net_worth_growth",
+      "target": 2.0,
+      "reward_cash": 20000000,
+      "reward_energy": 15
+    },
+    {
+      "id": "m_npc_interact",
+      "name": "인맥 관리",
+      "desc": "이번 달 NPC와 10회 이상 상호작용",
+      "type": "npc_interact",
+      "target": 10,
+      "reward_cash": 5000000,
+      "reward_energy": 8
+    }
+  ]
+}

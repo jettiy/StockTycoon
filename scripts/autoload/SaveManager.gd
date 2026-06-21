@@ -23,6 +23,8 @@ func save_game() -> bool:
 			"rental": PassiveIncomeManager.get_total_rental(),
 			"interest": PassiveIncomeManager.get_total_interest(),
 		},
+		"story": StoryManager.serialize(),
+		"quests": QuestManager.serialize(),
 		"timestamp": Time.get_unix_time_from_system(),
 	}
 
@@ -70,7 +72,15 @@ func load_game() -> bool:
 	# 이벤트 복원
 	if data.has("events") and data["events"].has("active"):
 		EventManager._active_events = data["events"]["active"]
-
+	
+	# 스토리 복원
+	if data.has("story"):
+		StoryManager.deserialize(data["story"])
+	
+	# 퀘스트/업적 복원
+	if data.has("quests"):
+		QuestManager.deserialize(data["quests"])
+	
 	loaded.emit()
 	return true
 

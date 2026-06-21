@@ -107,6 +107,10 @@ func buy_stock(stock_id: String, quantity: int) -> Dictionary:
 	holdings_changed.emit()
 	_emit_net_worth()
 
+	# 퀘스트/업적 추적
+	QuestManager.on_trade_made()
+	QuestManager.on_net_worth_changed()
+
 	return {"success": true, "cost": total, "fee": fee, "quantity": quantity}
 
 
@@ -145,6 +149,10 @@ func sell_stock(stock_id: String, quantity: int) -> Dictionary:
 	cash_changed.emit(player["cash"])
 	holdings_changed.emit()
 	_emit_net_worth()
+
+	# 퀘스트/업적 추적
+	QuestManager.on_trade_made(max(0.0, profit))
+	QuestManager.on_net_worth_changed()
 
 	return {"success": true, "revenue": net, "fee": fee, "profit": profit}
 
@@ -232,6 +240,11 @@ func advance_day() -> Dictionary:
 		cash_changed.emit(player["cash"])
 
 	day_advanced.emit(player["day"])
+	
+	# 퀘스트/스토리 시스템 업데이트
+	QuestManager.on_day_advanced()
+	StoryManager.check_triggers()
+	
 	return result
 
 
@@ -242,9 +255,11 @@ func _check_rank_up() -> void:
 	while player["rank_index"] + 1 < ranks.size():
 		var next_rank: Dictionary = ranks[player["rank_index"] + 1]
 		var req: float = next_rank["required_net_worth"]
+
 		if net_worth >= req:
 			player["rank_index"] += 1
 			rank_up.emit(next_rank["rank"])
+			QuestManager.on_rank_up(player["rank_index"])
 		else:
 			break
 
@@ -298,6 +313,16 @@ func buy_house(house_id: String) -> Dictionary:
 	player["cash"] -= price
 	player["house"] = house_id
 	cash_changed.emit(player["cash"])
+	
+	# 퀘스트/업적 추적
+	var house_list = get_housing_list()
+	var house_idx = 0
+	for i in range(house_list.size()):
+		if house_list[i]["id"] == house_id:
+			house_idx = i + 1
+			break
+	QuestManager.on_house_bought(house_idx)
+	
 	return {"success": true, "house": house}
 
 func buy_vehicle(vehicle_id: String) -> Dictionary:
@@ -322,6 +347,16 @@ func buy_vehicle(vehicle_id: String) -> Dictionary:
 	player["cash"] -= price
 	player["vehicle"] = vehicle_id
 	cash_changed.emit(player["cash"])
+	
+	# 퀘스트/업적 추적
+	var vehicle_list = get_vehicle_list()
+	var vehicle_idx = 0
+	for i in range(vehicle_list.size()):
+		if vehicle_list[i]["id"] == vehicle_id:
+			vehicle_idx = i + 1
+			break
+	QuestManager.on_vehicle_bought(vehicle_idx)
+	
 	return {"success": true, "vehicle": vehicle}
 
 

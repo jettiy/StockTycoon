@@ -81,6 +81,8 @@ func _build_ui() -> void:
 
 func _on_new_game() -> void:
 	GameManager.reset_player()
+	# 스토리/퀘스트 초기화
+	StoryManager.check_start_story()
 	get_tree().change_scene_to_file(MAIN_SCENE)
 
 

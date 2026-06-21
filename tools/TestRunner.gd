@@ -207,6 +207,47 @@ func _run_all_tests() -> void:
 		_pass()
 	else:
 		_fail("generation = %d" % gen)
+	
+	# 21. 스토리 데이터
+	current_test = "스토리 챕터 로드"
+	if StoryManager.get_chapter_count() == 7:
+		_pass()
+	else:
+		_fail("챕터 수 = %d" % StoryManager.get_chapter_count())
+	
+	# 22. 퀘스트 데이터
+	current_test = "퀘스트 데이터 로드"
+	var dq = QuestManager.get_daily_quests()
+	var wq = QuestManager.get_weekly_quests()
+	var mq = QuestManager.get_monthly_quests()
+	if dq.size() >= 3 and wq.size() >= 2 and mq.size() >= 2:
+		_pass()
+	else:
+		_fail("일일%d 주간%d 월간%d" % [dq.size(), wq.size(), mq.size()])
+	
+	# 23. 업적 데이터
+	current_test = "업적 데이터 로드"
+	var ach = QuestManager.get_achievements()
+	if ach.size() >= 15:
+		_pass()
+	else:
+		_fail("업적 수 = %d" % ach.size())
+	
+	# 24. 거래 시 퀘스트 추적
+	current_test = "거래 시 퀘스트 추적"
+	var trades_before = QuestManager.get_total_trades()
+	var trade_id = MarketSim.stocks.keys()[0]
+	GameManager.buy_stock(trade_id, 1)
+	var trades_after = QuestManager.get_total_trades()
+	if trades_after > trades_before:
+		_pass()
+	else:
+		_fail("거래 전 %d → 후 %d" % [trades_before, trades_after])
+	
+	# 25. 스토리 트리거 체크
+	current_test = "스토리 트리거 체크"
+	StoryManager.check_triggers()
+	_pass()  # 에러 없이 실행되면 통과
 
 func _pass() -> void:
 	passed += 1

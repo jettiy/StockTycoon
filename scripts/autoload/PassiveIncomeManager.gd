@@ -74,6 +74,8 @@ func _process_tick() -> void:
 	if total_income > 0:
 		GameManager.add_cash(total_income)
 		_last_income = total_income
+		# 퀘스트 추적
+		QuestManager.on_dividend_earned(total_income)
 
 ## 틱당 배당금 계산
 func _calc_tick_dividend() -> float:
