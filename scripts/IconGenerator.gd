@@ -205,8 +205,8 @@ func _get_stock_palette(stock_id: String) -> Array:
 		"samsung": return [Color(0.20, 0.40, 0.90), Color(0.40, 0.60, 1.0), Color(0.15, 0.30, 0.70)]
 		"skhynix": return [Color(0.90, 0.20, 0.20), Color(1.0, 0.40, 0.40), Color(0.70, 0.15, 0.15)]
 		"celltrion": return [Color(0.20, 0.80, 0.40), Color(0.40, 1.0, 0.60), Color(0.15, 0.60, 0.30)]
-		"kakaobank": return [Color(0.90, 0.90, 0.20), Color(1.0, 1.0, 0.40), Color(0.70, 0.70, 0.15)]
-		"baemin": return [Color(0.30, 0.70, 0.30), Color(0.50, 0.90, 0.50), Color(0.20, 0.50, 0.20)]
+		"alteogen": return [Color(0.20, 0.70, 0.80), Color(0.40, 0.85, 0.95), Color(0.15, 0.50, 0.65)]
+		"ecopro": return [Color(0.20, 0.60, 0.30), Color(0.40, 0.80, 0.40), Color(0.15, 0.45, 0.25)]
 		"apple": return [Color(0.90, 0.90, 0.92), Color(0.70, 0.70, 0.72), Color(0.50, 0.50, 0.52)]
 		"tesla": return[Color(0.90, 0.30, 0.30), Color(1.0, 0.50, 0.50), Color(0.70, 0.20, 0.20)]
 		"nvidia": return [Color(0.30, 0.90, 0.30), Color(0.50, 1.0, 0.50), Color(0.20, 0.70, 0.20)]
@@ -247,11 +247,11 @@ func _get_stock_pattern(stock_id: String) -> PackedByteArray:
 			_fill_buf_rect(buf, 7, 3, 2, 10, 2)
 			_fill_buf_rect(buf, 3, 7, 10, 2, 2)
 		# 금융 — 동전
-		"kakaobank", "kakaobank":
+		"alteogen", "alteogen":
 			_draw_buf_circle(buf, 8, 8, 6, 1)
 			_draw_buf_circle(buf, 8, 8, 4, 2)
 		# 배달 — 봉투
-		"baemin", "amazon":
+		"ecopro", "amazon":
 			_fill_buf_rect(buf, 3, 4, 10, 8, 1)
 			_fill_buf_rect(buf, 5, 6, 6, 4, 2)
 		# 자동차 — 차

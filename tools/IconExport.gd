@@ -14,7 +14,7 @@ func _ready() -> void:
 	
 	# 1. 종목 로고 16개
 	var stock_ids = [
-		"samsung", "skhynix", "celltrion", "kakaobank", "baemin",
+		"samsung", "skhynix", "celltrion", "alteogen", "ecopro",
 		"apple", "tesla", "nvidia", "microsoft", "meta", "amazon", "google",
 		"bitcoin", "ethereum", "dogecoin", "solana"
 	]

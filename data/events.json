@@ -46,10 +46,10 @@
       "category": "crypto"
     },
     {
-      "id": "kakaobank_record_profit",
-      "title": "카카오뱅크, 분기 최대 순이익 경신",
+      "id": "alteogen_record_profit",
+      "title": "알테오젠, 신약 파이프라인 임상 통과",
       "desc": "대출 성장 + 수익성 개선. 금융주 강세.",
-      "stock_ids": ["kakaobank"],
+      "stock_ids": ["alteogen"],
       "impact": 0.4,
       "weight": 8,
       "category": "earnings"
