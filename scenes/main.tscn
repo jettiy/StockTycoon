@@ -128,14 +128,6 @@ max_value = 1.0
 value = 0.0
 show_percentage = false
 
-[node name="AdvanceButton" type="Button" parent="Root/TopBar"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(110, 46)
-theme_override_font_sizes/font_size = 15
-theme_override_colors/font_color = Color(0.85, 0.7, 0.3, 1)
-text = "하루 넘기기"
-
 [node name="TimeControls" type="HBoxContainer" parent="Root/TopBar"]
 layout_mode = 2
 theme_override_constants/separation = 3

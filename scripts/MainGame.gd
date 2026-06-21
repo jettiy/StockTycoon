@@ -26,7 +26,6 @@ const VIEW_TABS := ["시장", "자동매매", "자산", "NPC", "진행"]
 @onready var _day_label: Label = %DayLabel
 @onready var _day_progress: ProgressBar = %DayProgress
 @onready var _passive_label: Label = %PassiveLabel
-@onready var _advance_btn: Button = %AdvanceButton
 @onready var _pause_btn: Button = %PauseButton
 @onready var _speed1_btn: Button = %Speed1x
 @onready var _speed2_btn: Button = %Speed2x
@@ -118,8 +117,8 @@ func _connect_signals() -> void:
 	GameManager.salary_paid.connect(_on_salary_paid)
 	MarketSim.market_tick.connect(_on_market_tick)
 	AutoTradeManager.auto_trade_executed.connect(_on_auto_trade_executed)
-	# 하루 넘기기 버튼 → GameClockManager.force_advance_day
-	_advance_btn.pressed.connect(_on_advance_btn)
+	# 시간 컨트롤 버튼
+	_pause_btn.pressed.connect(_on_pause_toggle)
 	# 자동 시간 흐름 시그널
 	GameClockManager.day_advanced.connect(_on_clock_day_advanced)
 	GameClockManager.day_progress_changed.connect(_on_day_progress_changed)
@@ -144,7 +143,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_3: _show_view("자산")
 			KEY_4: _show_view("NPC")
 			KEY_5: _show_view("진행")
-			KEY_SPACE: GameClockManager.force_advance_day()
 			KEY_ESCAPE: _close_trade_panel()
 			KEY_F11:
 				var mode := DisplayServer.window_get_mode()
@@ -1220,11 +1218,6 @@ func _on_sell() -> void:
 	else:
 		AudioManager.play_error()
 		_show_toast("실패: " + r.get("reason", ""))
-
-
-func _on_advance_btn() -> void:
-	# 하루 넘기기 버튼 — GameClockManager를 경유
-	GameClockManager.force_advance_day()
 
 
 func _on_clock_day_advanced(r: Dictionary) -> void:
