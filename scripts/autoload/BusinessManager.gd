@@ -383,13 +383,21 @@ func _fail(reason: String) -> Dictionary:
 	return {"success": false, "reason": reason}
 
 func _fmt(amount: float) -> String:
-	var a = int(amount)
-	if abs(a) >= 100000000:
-		return "%.2f억" % (amount / 100000000.0)
-	elif abs(a) >= 10000:
-		return "%.1f만" % (amount / 10000.0)
-	else:
-		return "%d" % a
+	var ab := absf(amount)
+	var sign := "-" if amount < 0 else ""
+	if ab >= 1_000_000_000_000:
+		return "%s%.1f조" % [sign, ab / 1_000_000_000_000]
+	elif ab >= 100_000_000:
+		return "%s%.1f억" % [sign, ab / 100_000_000]
+	elif ab >= 10_000_000:
+		return "%s%.0f천만" % [sign, ab / 10_000_000]
+	elif ab >= 1_000_000:
+		return "%s%d만" % [sign, int(ab / 10_000)]
+	elif ab >= 10_000:
+		return "%s%.1f만" % [sign, ab / 10_000]
+	elif ab >= 1_000:
+		return "%s%d천" % [sign, int(ab / 1_000)]
+	return "%s%d" % [sign, int(ab)]
 
 func _load_json(path: String) -> Variant:
 	if not FileAccess.file_exists(path):

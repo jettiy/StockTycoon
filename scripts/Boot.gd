@@ -382,9 +382,16 @@ func _spacer(height: float) -> Control:
 
 
 func _fmt_won(amount: float) -> String:
-	var abs_amount := absf(amount)
-	if abs_amount >= 100_000_000:
-		return "%.2f억원" % (amount / 100_000_000)
-	elif abs_amount >= 10_000_000:
-		return "%.1f천만원" % (amount / 10_000_000)
-	return "%.0f" % amount + "원"
+	var ab := absf(amount)
+	var sign := "-" if amount < 0 else ""
+	if ab >= 1_000_000_000_000:
+		return "%s%.2f조원" % [sign, ab / 1_000_000_000_000]
+	elif ab >= 100_000_000:
+		return "%s%.2f억원" % [sign, ab / 100_000_000]
+	elif ab >= 10_000_000:
+		return "%s%.1f천만원" % [sign, ab / 10_000_000]
+	elif ab >= 1_000_000:
+		return "%s%d만원" % [sign, int(ab / 10_000)]
+	elif ab >= 10_000:
+		return "%s%.1f만원" % [sign, ab / 10_000]
+	return "%s%.0f원" % [sign, ab]

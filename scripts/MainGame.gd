@@ -2542,27 +2542,55 @@ func _chg_color(p: float) -> Color:
 
 
 func _fmt_price(p: float) -> String:
-	if p >= 100_000_000:
+	# 주가 표시: 단위별 가변 (원/만원/억)
+	var ap := absf(p)
+	if ap >= 100_000_000:
 		return "%.2f억" % (p / 100_000_000)
-	return "%.0f" % int(p) + "원"
+	elif ap >= 10_000_000:
+		return "%.1f천만" % (p / 10_000_000)
+	elif ap >= 1_000_000:
+		return "%d만" % int(p / 10_000)
+	elif ap >= 10_000:
+		return "%.1f만" % (p / 10_000)
+	elif ap >= 1_000:
+		return "%d" % int(p)
+	return "%.0f" % p
 
 
 func _fmt_won(a: float) -> String:
+	# 통화 표시: 단위별 가변 (원/만원/천만원/억)
 	var ab := absf(a)
-	if ab >= 100_000_000:
-		return "%.2f억원" % (a / 100_000_000)
+	var sign := "-" if a < 0 else ""
+	if ab >= 1_000_000_000_000:
+		return "%s%.2f조원" % [sign, ab / 1_000_000_000_000]
+	elif ab >= 100_000_000:
+		return "%s%.2f억원" % [sign, ab / 100_000_000]
 	elif ab >= 10_000_000:
-		return "%.1f천만원" % (a / 10_000_000)
-	return "%.0f" % a + "원"
+		return "%s%.1f천만원" % [sign, ab / 10_000_000]
+	elif ab >= 1_000_000:
+		return "%s%d만원" % [sign, int(ab / 10_000)]
+	elif ab >= 10_000:
+		return "%s%.1f만원" % [sign, ab / 10_000]
+	return "%s%.0f원" % [sign, ab]
 
 
 func _fmt_won_short(a: float) -> String:
+	# 축약 표시 (초당 수익 등): 조/억/만/천/원
 	var ab := absf(a)
-	if ab >= 1_000_000:
-		return "%.1fM" % (a / 1_000_000)
+	var sign := "-" if a < 0 else ""
+	if ab >= 1_000_000_000_000:
+		return "%s%.1f조" % [sign, ab / 1_000_000_000_000]
+	elif ab >= 100_000_000:
+		return "%s%.1f억" % [sign, ab / 100_000_000]
+	elif ab >= 10_000_000:
+		return "%s%.0f천만" % [sign, ab / 10_000_000]
+	elif ab >= 1_000_000:
+		return "%s%d만" % [sign, int(ab / 10_000)]
+	elif ab >= 10_000:
+		return "%s%.1f만" % [sign, ab / 10_000]
 	elif ab >= 1_000:
-		return "%.1fK" % (a / 1_000)
-	return "%.0f" % a
+		return "%s%d천" % [sign, int(ab / 1_000)]
+	return "%s%d" % [sign, int(ab)]
 
 
 func _fmt_change(p: float) -> String:
