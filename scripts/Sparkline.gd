@@ -5,7 +5,7 @@ extends Control
 var _history: PackedFloat32Array = PackedFloat32Array()
 var _line_color: Color = Color(0.15, 0.65, 0.39, 1)
 var _fill_color: Color = Color(0.15, 0.65, 0.39, 0.15)
-var _bg_color: Color = Color(0.04, 0.04, 0.05, 0.5)
+var _bg_color: Color = Color(0.094, 0.098, 0.110, 0.3)
 
 
 func set_data(history: Array, is_up: bool) -> void:

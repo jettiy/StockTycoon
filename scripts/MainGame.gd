@@ -23,6 +23,7 @@ const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
 @onready var _cash_label: Label = %CashLabel
 @onready var _networth_label: Label = %NetWorthLabel
 @onready var _day_label: Label = %DayLabel
+@onready var _day_progress: ProgressBar = %DayProgress
 @onready var _passive_label: Label = %PassiveLabel
 @onready var _advance_btn: Button = %AdvanceButton
 @onready var _view_tabs: HBoxContainer = %ViewTabs
@@ -31,7 +32,7 @@ const VIEW_TABS := ["시장", "자동매매", "라이프", "NPC", "이벤트"]
 @onready var _toast: Label = %ToastLabel
 
 # 동적 생성되는 뷰
-var _market_view: VBoxContainer
+var _market_view: HBoxContainer
 var _autotrade_view: VBoxContainer
 var _life_view: VBoxContainer
 var _current_view: String = "시장"
@@ -39,17 +40,24 @@ var _current_view: String = "시장"
 # 시장 뷰 내부
 var _stock_scroll: ScrollContainer
 var _stock_list: VBoxContainer
-var _trade_panel: PanelContainer
+var _detail_panel: PanelContainer  # 오른쪽 상세 패널 (기존 _trade_panel 대체)
 var _stock_rows: Dictionary = {}
 var _current_category: String = ""
 var _selected_stock: String = ""
 
-# 매매 패널
-var _trade_stock_name: Label
-var _trade_price_label: Label
+# 상세 패널 위젯
+var _detail_name: Label
+var _detail_ticker: Label
+var _detail_price: Label
+var _detail_change: Label
+var _detail_meta: Label
+var _detail_holding: Label
+var _detail_avg_price: Label
+var _detail_eval_amount: Label
+var _detail_eval_pnl: Label
+var _detail_sparkline: Control
 var _trade_qty_edit: SpinBox
 var _trade_total_label: Label
-var _trade_holding_label: Label
 
 # 자동매매
 var _autotrade_slots: Array = []
@@ -91,7 +99,11 @@ func _connect_signals() -> void:
 	GameManager.salary_paid.connect(_on_salary_paid)
 	MarketSim.market_tick.connect(_on_market_tick)
 	AutoTradeManager.auto_trade_executed.connect(_on_auto_trade_executed)
-	_advance_btn.pressed.connect(_on_advance_day)
+	# 하루 넘기기 버튼 → GameClockManager.force_advance_day
+	_advance_btn.pressed.connect(_on_advance_btn)
+	# 자동 시간 흐름 시그널
+	GameClockManager.day_advanced.connect(_on_clock_day_advanced)
+	GameClockManager.day_progress_changed.connect(_on_day_progress_changed)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -102,7 +114,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_3: _show_view("라이프")
 			KEY_4: _show_view("NPC")
 			KEY_5: _show_view("이벤트")
-			KEY_SPACE: if _current_view == "시장": _on_advance_day()
+			KEY_SPACE: GameClockManager.force_advance_day()
 			KEY_ESCAPE: _close_trade_panel()
 			KEY_F11:
 				var mode := DisplayServer.window_get_mode()
@@ -118,7 +130,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _init_static_ui() -> void:
 	_rank_label.text = "  " + GameManager.get_rank_name()
-	_day_label.text = "%d일차" % GameManager.player["day"]
+	_day_label.text = "%d일차 09:00" % GameManager.player["day"]
+	if _day_progress:
+		_day_progress.value = 0.0
 
 	# View 탭 버튼들 생성
 	for tab_name in VIEW_TABS:
@@ -165,65 +179,123 @@ func _init_static_ui() -> void:
 # ═══════════════════════════════════════════════
 
 func _build_market_view() -> void:
-	_market_view = VBoxContainer.new()
+	_market_view = HBoxContainer.new()
 	_market_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_market_view.visible = false
+	_market_view.add_theme_constant_override("separation", 8)
 	_content.add_child(_market_view)
+
+	# ── 왼쪽: 종목 리스트 ──
+	var left_col := VBoxContainer.new()
+	left_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_col.size_flags_stretch_ratio = 1.3
+	_market_view.add_child(left_col)
 
 	_stock_scroll = ScrollContainer.new()
 	_stock_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_stock_scroll.add_theme_stylebox_override("panel", _flat(COL_PANEL, 0))
-	_market_view.add_child(_stock_scroll)
+	left_col.add_child(_stock_scroll)
 
 	_stock_list = VBoxContainer.new()
 	_stock_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stock_list.add_theme_constant_override("separation", 4)
 	_stock_scroll.add_child(_stock_list)
 
-	_build_trade_panel()
+	# ── 오른쪽: 상세 패널 ──
+	var right_col := VBoxContainer.new()
+	right_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_col.size_flags_stretch_ratio = 1.0
+	_market_view.add_child(right_col)
+
+	_build_detail_panel(right_col)
 	_populate_stock_list()
 
 
-func _build_trade_panel() -> void:
-	_trade_panel = PanelContainer.new()
-	_trade_panel.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 6))
-	_trade_panel.custom_minimum_size = Vector2(0, 100)
-	_trade_panel.visible = false
-	_market_view.add_child(_trade_panel)
+func _build_detail_panel(parent: VBoxContainer) -> void:
+	_detail_panel = PanelContainer.new()
+	_detail_panel.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 6))
+	_detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	parent.add_child(_detail_panel)
 
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 16)
-	_trade_panel.add_child(hbox)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 8)
+	vbox.offset_left = 16
+	vbox.offset_top = 12
+	vbox.offset_right = -16
+	vbox.offset_bottom = -12
+	_detail_panel.add_child(vbox)
 
-	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 3)
-	_trade_stock_name = Label.new()
-	_trade_stock_name.add_theme_font_size_override("font_size", 22)
-	_trade_stock_name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
-	info.add_child(_trade_stock_name)
-	_trade_price_label = Label.new()
-	_trade_price_label.add_theme_font_size_override("font_size", 17)
-	info.add_child(_trade_price_label)
-	_trade_holding_label = Label.new()
-	_trade_holding_label.add_theme_font_size_override("font_size", 14)
-	_trade_holding_label.add_theme_color_override("font_color", COL_TEXT_DIM)
-	info.add_child(_trade_holding_label)
-	hbox.add_child(info)
+	# 종목명
+	_detail_name = Label.new()
+	_detail_name.add_theme_font_size_override("font_size", 22)
+	_detail_name.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	vbox.add_child(_detail_name)
 
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(sp)
+	# 티커 / 메타
+	_detail_ticker = Label.new()
+	_detail_ticker.add_theme_font_size_override("font_size", 14)
+	_detail_ticker.add_theme_color_override("font_color", COL_TEXT_DIM)
+	vbox.add_child(_detail_ticker)
 
-	var act := HBoxContainer.new()
-	act.add_theme_constant_override("separation", 8)
-	act.alignment = BoxContainer.ALIGNMENT_END
+	_detail_meta = Label.new()
+	_detail_meta.add_theme_font_size_override("font_size", 14)
+	_detail_meta.add_theme_color_override("font_color", COL_TEXT_DIM)
+	vbox.add_child(_detail_meta)
+
+	# 스파크라인
+	var spark_script := load("res://scripts/Sparkline.gd")
+	_detail_sparkline = Control.new()
+	_detail_sparkline.set_script(spark_script)
+	_detail_sparkline.custom_minimum_size = Vector2(0, 80)
+	vbox.add_child(_detail_sparkline)
+
+	# 현재가 + 등락률
+	_detail_price = Label.new()
+	_detail_price.add_theme_font_size_override("font_size", 24)
+	_detail_price.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
+	vbox.add_child(_detail_price)
+
+	_detail_change = Label.new()
+	_detail_change.add_theme_font_size_override("font_size", 18)
+	vbox.add_child(_detail_change)
+
+	# 보유 정보
+	var sep1 := HSeparator.new()
+	vbox.add_child(sep1)
+
+	_detail_holding = Label.new()
+	_detail_holding.add_theme_font_size_override("font_size", 15)
+	_detail_holding.add_theme_color_override("font_color", COL_TEXT_DIM)
+	vbox.add_child(_detail_holding)
+
+	_detail_avg_price = Label.new()
+	_detail_avg_price.add_theme_font_size_override("font_size", 15)
+	_detail_avg_price.add_theme_color_override("font_color", COL_TEXT_DIM)
+	vbox.add_child(_detail_avg_price)
+
+	_detail_eval_amount = Label.new()
+	_detail_eval_amount.add_theme_font_size_override("font_size", 15)
+	_detail_eval_amount.add_theme_color_override("font_color", COL_TEXT_DIM)
+	vbox.add_child(_detail_eval_amount)
+
+	_detail_eval_pnl = Label.new()
+	_detail_eval_pnl.add_theme_font_size_override("font_size", 16)
+	vbox.add_child(_detail_eval_pnl)
+
+	# 매수/매도 영역
+	var sep2 := HSeparator.new()
+	vbox.add_child(sep2)
+
+	var trade_hbox := HBoxContainer.new()
+	trade_hbox.add_theme_constant_override("separation", 8)
+	vbox.add_child(trade_hbox)
 
 	var ql := Label.new()
 	ql.text = "수량"
-	ql.add_theme_font_size_override("font_size", 13)
+	ql.add_theme_font_size_override("font_size", 15)
 	ql.add_theme_color_override("font_color", COL_TEXT_DIM)
 	ql.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	act.add_child(ql)
+	trade_hbox.add_child(ql)
 
 	_trade_qty_edit = SpinBox.new()
 	_trade_qty_edit.min_value = 1
@@ -231,39 +303,71 @@ func _build_trade_panel() -> void:
 	_trade_qty_edit.value = 1
 	_trade_qty_edit.custom_minimum_size = Vector2(120, 42)
 	_trade_qty_edit.value_changed.connect(_on_qty_changed)
-	act.add_child(_trade_qty_edit)
+	trade_hbox.add_child(_trade_qty_edit)
 
 	_trade_total_label = Label.new()
 	_trade_total_label.text = "0원"
-	_trade_total_label.add_theme_font_size_override("font_size", 14)
-	_trade_total_label.custom_minimum_size = Vector2(130, 0)
+	_trade_total_label.add_theme_font_size_override("font_size", 17)
+	_trade_total_label.custom_minimum_size = Vector2(140, 0)
 	_trade_total_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_trade_total_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	act.add_child(_trade_total_label)
+	trade_hbox.add_child(_trade_total_label)
+
+	# 빠른 수량 버튼
+	var qty_row := HBoxContainer.new()
+	qtyRow_add_buttons(qty_row)
+	vbox.add_child(qty_row)
+
+	# 매수/매도 버튼
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 8)
+	vbox.add_child(btn_row)
 
 	var buy := Button.new()
 	buy.text = "매수"
-	buy.custom_minimum_size = Vector2(80, 42)
+	buy.custom_minimum_size = Vector2(0, 44)
+	buy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	buy.add_theme_font_size_override("font_size", 18)
 	buy.add_theme_color_override("font_color", COL_UP)
 	buy.pressed.connect(_on_buy)
-	act.add_child(buy)
+	btn_row.add_child(buy)
 
 	var sell := Button.new()
 	sell.text = "매도"
-	sell.custom_minimum_size = Vector2(80, 42)
+	sell.custom_minimum_size = Vector2(0, 44)
+	sell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sell.add_theme_font_size_override("font_size", 18)
 	sell.add_theme_color_override("font_color", COL_DOWN)
 	sell.pressed.connect(_on_sell)
-	act.add_child(sell)
+	btn_row.add_child(sell)
 
-	var close := Button.new()
-	close.text = "x"
-	close.custom_minimum_size = Vector2(36, 36)
-	close.pressed.connect(_close_trade_panel)
-	act.add_child(close)
-
-	hbox.add_child(act)
+# SpinBox 빠른 수량 버튼 추가
+func qtyRow_add_buttons(row: HBoxContainer) -> void:
+	row.add_theme_constant_override("separation", 6)
+	var labels := ["+1", "+10", "+100", "최대"]
+	for lbl in labels:
+		var btn := Button.new()
+		btn.text = lbl
+		btn.custom_minimum_size = Vector2(0, 30)
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.add_theme_font_size_override("font_size", 13)
+		btn.add_theme_color_override("font_color", COL_TEXT_DIM)
+		match lbl:
+			"+1": btn.pressed.connect(func(): _trade_qty_edit.value += 1)
+			"+10": btn.pressed.connect(func(): _trade_qty_edit.value += 10)
+			"+100": btn.pressed.connect(func(): _trade_qty_edit.value += 100)
+			"최대":
+				btn.pressed.connect(func():
+					if _selected_stock != "":
+						var s := MarketSim.get_stock(_selected_stock)
+						if not s.is_empty():
+							var cash := GameManager.get_cash()
+							var max_qty := int(cash / float(s["price"]))
+							if max_qty < 1:
+								max_qty = 1
+							_trade_qty_edit.value = max_qty
+				)
+		row.add_child(btn)
 
 
 func _populate_stock_list() -> void:
@@ -609,6 +713,12 @@ func _show_view(view_name: String) -> void:
 			_update_view_tab_style(child, child.get_meta("view") == view_name)
 	# 뷰 진입 시 새로고침
 	match view_name:
+		"시장":
+			# 첫 종목 자동 선택
+			if _selected_stock == "" and _stock_rows.size() > 0:
+				_selected_stock = _stock_rows.keys()[0]
+			_update_row_selection()
+			_update_detail_panel()
 		"NPC": _refresh_npc_view()
 		"이벤트": _refresh_event_view()
 
@@ -659,32 +769,73 @@ func _apply_cat_filter() -> void:
 
 func _on_stock_clicked(sid: String) -> void:
 	_selected_stock = sid
-	_trade_panel.visible = true
-	UIAnim.slide_in_from_bottom(_trade_panel, 20.0, 0.2)
-	_update_trade_panel()
+	_update_row_selection()
+	_update_detail_panel()
 
 
 func _close_trade_panel() -> void:
-	_trade_panel.visible = false
+	# 상세 패널은 항상 보이므로 선택만 해제
 	_selected_stock = ""
+	_update_row_selection()
+	_update_detail_panel()
 
 
-func _update_trade_panel() -> void:
+func _update_detail_panel() -> void:
 	if _selected_stock == "":
+		_detail_name.text = "종목을 선택하세요"
+		_detail_ticker.text = ""
+		_detail_meta.text = ""
+		_detail_price.text = ""
+		_detail_change.text = ""
+		_detail_holding.text = ""
+		_detail_avg_price.text = ""
+		_detail_eval_amount.text = ""
+		_detail_eval_pnl.text = ""
 		return
 	var s: Dictionary = MarketSim.get_stock(_selected_stock)
 	if s.is_empty():
 		return
-	_trade_stock_name.text = "%s (%s)" % [s["name"], s.get("ticker", "")]
-	_trade_price_label.text = _fmt_price(s["price"]) + "  " + _fmt_change(s.get("change_pct", 0.0))
-	_trade_price_label.add_theme_color_override("font_color", _chg_color(s.get("change_pct", 0.0)))
+	_detail_name.text = s["name"]
+	_detail_ticker.text = s.get("ticker", "")
+	_detail_meta.text = "%s / %s" % [_cat_tag_kr(s.get("category", "")), s.get("sector", "")]
+	_detail_price.text = _fmt_price(s["price"])
+	var pct: float = s.get("change_pct", 0.0)
+	_detail_change.text = _fmt_change(pct)
+	_detail_change.add_theme_color_override("font_color", _chg_color(pct))
+	_detail_price.add_theme_color_override("font_color", _chg_color(pct) if abs(pct) > 0.1 else COL_TEXT_BRIGHT)
 	var q: int = GameManager.get_holding_quantity(_selected_stock)
 	if q > 0:
-		var avg: float = GameManager.get_holding(_selected_stock)["avg_price"]
-		_trade_holding_label.text = "보유: %d주 | 평단가 %s" % [q, _fmt_price(avg)]
+		var avg: float = float(GameManager.get_holding(_selected_stock).get("avg_price", 0))
+		var eval_amount: float = float(s["price"]) * q
+		var pnl: float = eval_amount - avg * q
+		_detail_holding.text = "보유: %d주" % q
+		_detail_avg_price.text = "평단가: %s" % _fmt_price(avg)
+		_detail_eval_amount.text = "평가금액: %s" % _fmt_price(eval_amount)
+		_detail_eval_pnl.text = "평가손익: %s%s" % ["+" if pnl >= 0 else "", _fmt_won(pnl)]
+		_detail_eval_pnl.add_theme_color_override("font_color", COL_UP if pnl >= 0 else COL_DOWN)
 	else:
-		_trade_holding_label.text = "보유 없음"
+		_detail_holding.text = "보유 없음"
+		_detail_avg_price.text = ""
+		_detail_eval_amount.text = ""
+		_detail_eval_pnl.text = ""
+	if _detail_sparkline and s.get("history", []).size() >= 2:
+		_detail_sparkline.set_data(s["history"], pct >= 0)
 	_on_qty_changed(_trade_qty_edit.value)
+
+func _cat_tag_kr(cat: String) -> String:
+	match cat:
+		"korea": return "한국"
+		"usa": return "미국"
+		"coin": return "코인"
+		_: return cat
+
+func _update_row_selection() -> void:
+	for sid in _stock_rows:
+		var row: Control = _stock_rows[sid]
+		if sid == _selected_stock:
+			row.add_theme_stylebox_override("normal", _flat(COL_PANEL_LIGHT, 4))
+		else:
+			row.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
 
 
 func _on_qty_changed(value: float) -> void:
@@ -703,9 +854,8 @@ func _on_buy() -> void:
 	var r := GameManager.buy_stock(_selected_stock, qty)
 	if r.get("success"):
 		AudioManager.play_buy()
-		UIAnim.pulse(_trade_panel)
 		_show_toast("매수 완료: %d주 (%s)" % [qty, _fmt_won(r["cost"])])
-		_update_trade_panel()
+		_update_detail_panel()
 	else:
 		AudioManager.play_error()
 		_show_toast("실패: " + r.get("reason", ""))
@@ -718,21 +868,25 @@ func _on_sell() -> void:
 	var r := GameManager.sell_stock(_selected_stock, qty)
 	if r.get("success"):
 		AudioManager.play_sell()
-		UIAnim.pulse(_trade_panel)
+		UIAnim.pulse(_detail_panel)
 		var pt := ""
 		if r.has("profit"):
 			var p: float = r["profit"]
 			pt = " (수익 +%s)" % _fmt_won(p) if p >= 0 else " (손실 %s)" % _fmt_won(abs(p))
 		_show_toast("매도 완료: %d주%s" % [qty, pt])
-		_update_trade_panel()
+		_update_detail_panel()
 	else:
 		AudioManager.play_error()
 		_show_toast("실패: " + r.get("reason", ""))
 
 
-func _on_advance_day() -> void:
-	var r := GameManager.advance_day()
-	MarketSim.advance_day()
+func _on_advance_btn() -> void:
+	# 하루 넘기기 버튼 — GameClockManager를 경유
+	GameClockManager.force_advance_day()
+
+
+func _on_clock_day_advanced(r: Dictionary) -> void:
+	# 자동 시간 흐름 + 수동 버튼 공통 핸들러
 	AudioManager.play_day_advance()
 	var msg := "%d일차" % r["day"]
 	if r.get("salary", 0.0) > 0:
@@ -746,7 +900,7 @@ func _on_advance_day() -> void:
 		msg += " | 파산방지 +%s" % _fmt_won(r["bailout"])
 	if r.get("dividends", 0.0) > 0:
 		msg += " | 배당금 +%s" % _fmt_won(r["dividends"])
-	_day_label.text = "%d일차" % r["day"]
+	_day_label.text = "%d일차 %s" % [r["day"], GameClockManager.get_virtual_time()]
 	_show_toast(msg)
 
 	# 일일 이벤트 발생
@@ -794,7 +948,15 @@ func _on_net_worth_changed(nw: float) -> void:
 
 
 func _on_day_advanced(d: int) -> void:
-	_day_label.text = "%d일차" % d
+	_day_label.text = "%d일차 %s" % [d, GameClockManager.get_virtual_time()]
+
+
+func _on_day_progress_changed(progress: float) -> void:
+	if _day_progress:
+		_day_progress.value = progress
+	if _day_label:
+		var day: int = GameManager.player.get("day", 1)
+		_day_label.text = "%d일차 %s" % [day, GameClockManager.get_virtual_time()]
 
 
 func _on_rank_up(nr: String) -> void:
@@ -923,8 +1085,8 @@ func _on_market_tick() -> void:
 			_passive_label.text = "0원/초"
 			_passive_label.add_theme_color_override("font_color", COL_TEXT_DIM)
 
-	if _trade_panel.visible:
-		_update_trade_panel()
+	if _selected_stock != "":
+		_update_detail_panel()
 
 	AutoTradeManager.check_and_execute()
 
