@@ -7,7 +7,7 @@ signal day_progress_changed(progress: float)
 signal day_advanced(result: Dictionary)
 signal time_tick(day: int, progress: float)
 
-var real_seconds_per_game_day: float = 120.0
+var real_seconds_per_game_day: float = 240.0
 var day_progress: float = 0.0
 var is_paused: bool = false
 var speed_multiplier: float = 1.0

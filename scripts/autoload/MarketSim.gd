@@ -11,7 +11,7 @@ var market_cycle: float = 0.0
 var _tick_timer: float = 0.0
 var _elapsed: float = 0.0
 
-var _tick_interval: float = 2.0
+var _tick_interval: float = 4.0
 var _history_length: int = 60
 var _cycle_period: float = 120.0
 var _cycle_amplitude: float = 0.6

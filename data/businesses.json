@@ -8,7 +8,7 @@
     "max_employees": 5,
     "employee_hire_energy_cost": 3,
     "event_chance_daily": 0.12,
-    "game_accel": 10.0
+    "game_accel": 30.0
   },
   "businesses": [
     {

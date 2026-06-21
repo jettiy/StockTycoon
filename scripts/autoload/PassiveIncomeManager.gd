@@ -9,7 +9,7 @@ signal dividends_paid(total: float)
 var _tick_timer: float = 0.0
 var _tick_interval: float = 5.0
 var _interest_rate: float = 0.00003  # 일일 이율
-var _game_accel: float = 10.0  # 1틱 = 게임상 1/N일
+var _game_accel: float = 30.0  # 1틱 = 게임상 1/N일
 var _config: Dictionary = {}
 
 # 일일 캡 (순자산 대비 %)

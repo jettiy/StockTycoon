@@ -161,7 +161,7 @@
     }
   ],
   "market": {
-    "tick_interval_seconds": 2.0,
+    "tick_interval_seconds": 4.0,
     "history_length": 60,
     "market_cycle_period": 120.0,
     "market_cycle_amplitude": 0.6
@@ -178,8 +178,8 @@
       "island": 1000000
     },
     "interest_rate_daily": 0.00003,
-    "tick_income_interval": 5.0,
-    "game_time_acceleration": 10.0,
+    "tick_income_interval": 8.0,
+    "game_time_acceleration": 30.0,
     "passive_display_enabled": true,
     "daily_dividend_cap_pct": 0.05,
     "daily_rental_cap_pct": 0.03,
