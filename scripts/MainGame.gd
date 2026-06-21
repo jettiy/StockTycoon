@@ -1682,14 +1682,6 @@ func _on_day_advanced(d: int) -> void:
 	_day_label.text = "%d일차 %s" % [d, GameClockManager.get_time_string()]
 
 
-func _on_time_changed(hour: int, minute: int, phase: int) -> void:
-	if _day_label:
-		var day: int = GameManager.player.get("day", 1)
-		_day_label.text = "%d일차 %02d:%02d" % [day, hour, minute]
-	if _day_progress:
-		_day_progress.value = GameClockManager.get_phase_progress()
-
-
 func _on_rank_up(nr: String) -> void:
 	_rank_label.text = "  " + nr
 	_show_toast("승진! → %s" % nr)
