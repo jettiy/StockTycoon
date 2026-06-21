@@ -104,6 +104,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_5: _show_view("이벤트")
 			KEY_SPACE: if _current_view == "시장": _on_advance_day()
 			KEY_ESCAPE: _close_trade_panel()
+			KEY_F11:
+				var mode := DisplayServer.window_get_mode()
+				if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
+					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+				else:
+					DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 
 # ═══════════════════════════════════════════════

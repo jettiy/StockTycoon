@@ -19,7 +19,39 @@ var _popup: PanelContainer
 
 
 func _ready() -> void:
+	_setup_window()
 	_build_ui()
+
+
+func _setup_window() -> void:
+	# 모니터 해상도 감지
+	var screen_size := DisplayServer.screen_get_size()
+	# 창을 모니터의 85% 크기로 설정 (전체화면은 아님)
+	var win_w := int(screen_size.x * 0.85)
+	var win_h := int(screen_size.y * 0.85)
+	DisplayServer.window_set_size(Vector2i(win_w, win_h))
+	# 화면 중앙 배치
+	DisplayServer.window_set_position(Vector2i(
+		(screen_size.x - win_w) / 2,
+		(screen_size.y - win_h) / 2
+	))
+
+
+func _input(event: InputEvent) -> void:
+	# F11: 전체화면 토글
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_F11:
+			var mode := DisplayServer.window_get_mode()
+			if mode == DisplayServer.WINDOW_MODE_FULLSCREEN:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+				_setup_window()
+			else:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		# ESC: 전체화면 해제
+		elif event.keycode == KEY_ESCAPE:
+			if DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN:
+				DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+				_setup_window()
 
 
 func _build_ui() -> void:
