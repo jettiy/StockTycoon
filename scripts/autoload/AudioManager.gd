@@ -153,6 +153,42 @@ func play_button_click() -> void:
 	_play(s, -3.0)
 
 
+## 퀘스트 완료 — 상승 멜로디
+func play_quest_complete() -> void:
+	var s1 := _make_blip(660.0, 0.08, 0)
+	_play(s1, 0.0)
+	var s2 := _make_blip(880.0, 0.08, 0)
+	get_tree().create_timer(0.08).timeout.connect(func(): _play(s2, 0.0))
+	var s3 := _make_blip(1100.0, 0.12, 0)
+	get_tree().create_timer(0.16).timeout.connect(func(): _play(s3, 0.0))
+
+
+## 업적 달성 — 골드 멜로디
+func play_achievement_unlock() -> void:
+	var s1 := _make_blip(880.0, 0.06, 1)
+	_play(s1, 0.0)
+	var s2 := _make_blip(1320.0, 0.10, 1)
+	get_tree().create_timer(0.06).timeout.connect(func(): _play(s2, 0.0))
+
+
+## 스토리 해금 — 깊은음
+func play_story_unlock() -> void:
+	var s := _make_blip(330.0, 0.25, 2)
+	_play(s, 2.0)
+
+
+## 사업 이벤트 (호황)
+func play_business_good() -> void:
+	var s := _make_blip(770.0, 0.10, 0)
+	_play(s, 0.0)
+
+
+## 사업 이벤트 (불황)
+func play_business_bad() -> void:
+	var s := _make_blip(300.0, 0.15, 2)
+	_play(s, 0.0)
+
+
 func set_volume(vol: float) -> void:
 	_master_volume = clampf(vol, 0.0, 1.0)
 	for p in _audio_players:

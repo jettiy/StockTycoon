@@ -3,6 +3,7 @@ extends Control
 ## 씬 에디터 기반: 정적 UI는 main.tscn에 정의, 동적 데이터만 코드에서 생성
 
 const UIAnim := preload("res://scripts/UIAnim.gd")
+const IconGenerator := preload("res://scripts/IconGenerator.gd")
 
 # 색상 (Theme과 별도로 코드에서 직접 사용하는 색)
 const COL_UP := Color(0.15, 0.65, 0.39, 1)
@@ -85,6 +86,7 @@ var _achievement_container: VBoxContainer
 var _story_container: VBoxContainer
 var _tutorial_container: VBoxContainer
 var _cutscene_popup: PanelContainer
+var _achievement_cat_filter: String = ""
 
 # 사업 뷰
 var _asset_business_container: VBoxContainer
@@ -1274,41 +1276,45 @@ func _on_clock_day_advanced(r: Dictionary) -> void:
 
 ## 퀘스트 완료 알림
 func _on_quest_completed(quest_id: String, reward: Dictionary) -> void:
+	AudioManager.play_quest_complete()
 	var msg := "[퀘스트 완료] %s" % reward.get("name", quest_id)
 	if reward.get("cash", 0.0) > 0:
 		msg += " +%s" % _fmt_won(reward["cash"])
-	_show_toast(msg)
+	_show_toast(msg, COL_GOLD)
 	if _current_view == "진행":
 		_refresh_quest_section()
 
 
 ## 업적 달성 알림
 func _on_achievement_unlocked(ach_id: String, name: String) -> void:
-	_show_toast("[업적 달성] %s" % name)
+	AudioManager.play_achievement_unlock()
+	_show_toast("[업적 달성] %s" % name, COL_GOLD)
 	if _current_view == "진행":
 		_refresh_achievement_section()
 
 
 ## 스토리 챕터 시작 알림
 func _on_story_chapter_started(chapter_id: String) -> void:
-	_show_toast("[스토리] 새 챕터 시작")
+	AudioManager.play_story_unlock()
+	_show_toast("[스토리] 새 챕터 시작", COL_ACCENT)
 	if _current_view == "진행":
 		_refresh_story_section()
 
 
-## 스토리 이벤트 (컷신 텍스트)
+## 스토리 이벤트 (컷신)
 func _on_story_event(text: String) -> void:
-	_show_cutscene_popup(text)
+	var scene_info: Dictionary = StoryManager.get_current_scene_info()
+	_show_cutscene_popup(scene_info)
 
 
-## 컷신 팝업 표시 (최소 구현)
-func _show_cutscene_popup(text: String) -> void:
+## 컷신 팝업 표시
+func _show_cutscene_popup(scene_info: Dictionary) -> void:
 	if _cutscene_popup and is_instance_valid(_cutscene_popup):
 		_cutscene_popup.queue_free()
 
 	# 오버레이
 	var overlay := ColorRect.new()
-	overlay.color = Color(0, 0, 0, 0.75)
+	overlay.color = Color(0, 0, 0, 0.80)
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	overlay.z_index = 60
 	add_child(overlay)
@@ -1316,53 +1322,109 @@ func _show_cutscene_popup(text: String) -> void:
 	# 팝업 패널
 	_cutscene_popup = PanelContainer.new()
 	_cutscene_popup.set_anchors_preset(Control.PRESET_CENTER)
-	_cutscene_popup.custom_minimum_size = Vector2(500, 200)
+	_cutscene_popup.custom_minimum_size = Vector2(560, 280)
 	_cutscene_popup.add_theme_stylebox_override("panel", _flat(COL_PANEL_LIGHT, 8))
 	_cutscene_popup.z_index = 61
 	add_child(_cutscene_popup)
 
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 12)
-	vbox.offset_left = 24
-	vbox.offset_top = 20
-	vbox.offset_right = -24
-	vbox.offset_bottom = -20
-	_cutscene_popup.add_child(vbox)
+	# 메인 HBox: 초상화 | 대사
+	var main_hbox := HBoxContainer.new()
+	main_hbox.add_theme_constant_override("separation", 16)
+	main_hbox.offset_left = 20
+	main_hbox.offset_top = 20
+	main_hbox.offset_right = -20
+	main_hbox.offset_bottom = -20
+	_cutscene_popup.add_child(main_hbox)
+
+	# 초상화 영역
+	var portrait_type: String = scene_info.get("portrait", "narration")
+	var portrait_tex := _get_portrait_texture(portrait_type)
+	if portrait_tex:
+		var portrait_rect := TextureRect.new()
+		portrait_rect.texture = portrait_tex
+		portrait_rect.custom_minimum_size = Vector2(96, 96)
+		portrait_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		portrait_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		main_hbox.add_child(portrait_rect)
+
+	# 대사 영역
+	var content_vbox := VBoxContainer.new()
+	content_vbox.add_theme_constant_override("separation", 8)
+	content_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main_hbox.add_child(content_vbox)
+
+	# 챕터 제목
+	var chapter_title: String = scene_info.get("chapter_title", "")
+	if chapter_title != "":
+		var ch_lbl := Label.new()
+		ch_lbl.text = "[ " + chapter_title + " ]"
+		ch_lbl.add_theme_font_size_override("font_size", 13)
+		ch_lbl.add_theme_color_override("font_color", COL_ACCENT)
+		content_vbox.add_child(ch_lbl)
+
+	# 화자명
+	var speaker: String = scene_info.get("speaker", "")
+	if speaker != "":
+		var speaker_lbl := Label.new()
+		speaker_lbl.text = speaker
+		speaker_lbl.add_theme_font_size_override("font_size", 18)
+		speaker_lbl.add_theme_color_override("font_color", COL_GOLD)
+		content_vbox.add_child(speaker_lbl)
 
 	# 대사 텍스트
+	var text_content: String = scene_info.get("text", scene_info.get("formatted", ""))
+	if text_content == "":
+		text_content = str(scene_info)
 	var text_lbl := Label.new()
-	text_lbl.text = text
+	text_lbl.text = text_content
 	text_lbl.add_theme_font_size_override("font_size", 16)
 	text_lbl.add_theme_color_override("font_color", COL_TEXT_BRIGHT)
 	text_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	vbox.add_child(text_lbl)
+	content_vbox.add_child(text_lbl)
+
+	# 진행도 표시
+	var scene_idx: int = int(scene_info.get("scene_idx", 0))
+	var total_scenes: int = int(scene_info.get("total_scenes", 1))
+	var prog_lbl := Label.new()
+	prog_lbl.text = "%d / %d" % [scene_idx + 1, total_scenes]
+	prog_lbl.add_theme_font_size_override("font_size", 12)
+	prog_lbl.add_theme_color_override("font_color", COL_TEXT_DIM)
+	prog_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	content_vbox.add_child(prog_lbl)
 
 	# 버튼 행
 	var btn_row := HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_END
 	btn_row.add_theme_constant_override("separation", 8)
-	vbox.add_child(btn_row)
+	content_vbox.add_child(btn_row)
 
 	# 다음 버튼
 	var next_btn := Button.new()
 	next_btn.text = "다음"
-	next_btn.custom_minimum_size = Vector2(80, 36)
+	next_btn.custom_minimum_size = Vector2(90, 38)
 	next_btn.add_theme_font_size_override("font_size", 15)
 	next_btn.add_theme_color_override("font_color", COL_ACCENT)
+	next_btn.size_flags_horizontal = Control.SIZE_SHRINK_END
 	next_btn.pressed.connect(
 		func():
 			StoryManager.advance_scene()
 			overlay.queue_free()
 			_cutscene_popup.queue_free()
 			_cutscene_popup = null
+			# 다음 컷신이 있으면 표시
+			if StoryManager.is_playing():
+				var next_info: Dictionary = StoryManager.get_current_scene_info()
+				if not next_info.is_empty():
+					_show_cutscene_popup(next_info)
 	)
 	btn_row.add_child(next_btn)
 
 	# 스킵 버튼
 	var skip_btn := Button.new()
 	skip_btn.text = "스킵"
-	skip_btn.custom_minimum_size = Vector2(80, 36)
+	skip_btn.custom_minimum_size = Vector2(90, 38)
 	skip_btn.add_theme_font_size_override("font_size", 15)
 	skip_btn.add_theme_color_override("font_color", COL_TEXT_DIM)
 	skip_btn.pressed.connect(
@@ -1373,6 +1435,28 @@ func _show_cutscene_popup(text: String) -> void:
 			_cutscene_popup = null
 	)
 	btn_row.add_child(skip_btn)
+
+
+## 초상화 텍스처 생성
+func _get_portrait_texture(portrait_type: String) -> Texture2D:
+	var icon_gen := IconGenerator.new()
+	match portrait_type:
+		"player":
+			return icon_gen.make_character_portrait(GameManager.player.get("generation", 1), 96)
+		"boss":
+			return icon_gen.make_npc_avatar("#D9B34D", 96)
+		"rival1", "rival3":
+			return icon_gen.make_npc_avatar("#CC4545", 96)
+		"helper1":
+			return icon_gen.make_npc_avatar("#3390D4", 96)
+		"spouse":
+			return icon_gen.make_npc_avatar("#E8E8E8", 96)
+		"child":
+			return icon_gen.make_npc_avatar("#28A66A", 96)
+		"news":
+			return icon_gen.make_npc_avatar("#8A8D96", 96)
+		"narration", _:
+			return null
 
 
 func _on_save() -> void:
@@ -2088,8 +2172,33 @@ func _refresh_achievement_section() -> void:
 	rate_bar.show_percentage = false
 	_achievement_container.add_child(rate_bar)
 
+	# 카테고리 필터 버튼
+	var filter_row := HBoxContainer.new()
+	filter_row.add_theme_constant_override("separation", 4)
+	_achievement_container.add_child(filter_row)
+
+	var cat_filters := ["전체", "거래", "자산", "라이프", "수익", "사업", "특수"]
+	for cat_label in cat_filters:
+		var btn := Button.new()
+		btn.text = cat_label
+		btn.custom_minimum_size = Vector2(60, 28)
+		btn.add_theme_font_size_override("font_size", 13)
+		var active: bool = (_ach_cat_name_reverse(cat_label) == _achievement_cat_filter) or (cat_label == "전체" and _achievement_cat_filter == "")
+		if active:
+			btn.add_theme_stylebox_override("normal", _flat(COL_ACCENT, 4))
+			btn.add_theme_color_override("font_color", Color.WHITE)
+		else:
+			btn.add_theme_stylebox_override("normal", _flat(COL_PANEL, 4))
+			btn.add_theme_color_override("font_color", COL_TEXT_DIM)
+		btn.pressed.connect(_on_achievement_cat_filter.bind(_ach_cat_name_reverse(cat_label) if cat_label != "전체" else ""))
+		filter_row.add_child(btn)
+
 	var achs: Array = QuestManager.get_achievements()
 	for ach in achs:
+		# 필터링
+		if _achievement_cat_filter != "" and ach.get("category", "") != _achievement_cat_filter:
+			continue
+
 		var panel := PanelContainer.new()
 		var is_unlocked: bool = ach.get("unlocked", false)
 		if is_unlocked:
@@ -2153,6 +2262,22 @@ func _ach_cat_name(cat: String) -> String:
 		"business": return "사업"
 		"special": return "특수"
 		_: return cat
+
+
+func _ach_cat_name_reverse(kr: String) -> String:
+	match kr:
+		"거래": return "trading"
+		"자산": return "wealth"
+		"라이프": return "life"
+		"수익": return "income"
+		"사업": return "business"
+		"특수": return "special"
+		_: return ""
+
+
+func _on_achievement_cat_filter(cat: String) -> void:
+	_achievement_cat_filter = cat
+	_refresh_achievement_section()
 
 
 ## 스토리 섹션
@@ -2363,17 +2488,35 @@ func _refresh_all() -> void:
 	_on_net_worth_changed(GameManager.get_net_worth())
 
 
-func _show_toast(msg: String) -> void:
-	_toast.text = msg
+var _toast_queue: Array = []
+var _toast_showing: bool = false
+
+func _show_toast(msg: String, color: Color = COL_TEXT_BRIGHT) -> void:
+	_toast_queue.append({"msg": msg, "color": color})
+	if not _toast_showing:
+		_process_toast_queue()
+
+
+func _process_toast_queue() -> void:
+	if _toast_queue.is_empty():
+		_toast_showing = false
+		return
+	_toast_showing = true
+	var item: Dictionary = _toast_queue.pop_front()
+	_toast.text = item["msg"]
+	_toast.add_theme_color_override("font_color", item["color"])
 	_toast.visible = true
-	_toast.modulate.a = 1.0
-	_toast.position.y = 70
-	# 슬라이드 인 + 페이드 아웃
+	_toast.modulate.a = 0.0
+	_toast.position.y = 80
 	var tw := create_tween()
+	tw.tween_property(_toast, "modulate:a", 1.0, 0.15)
 	tw.tween_property(_toast, "position:y", 60, 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tw.tween_interval(1.8)
-	tw.tween_property(_toast, "modulate:a", 0.0, 0.5)
-	tw.tween_callback(func(): _toast.visible = false)
+	tw.tween_interval(1.5)
+	tw.tween_property(_toast, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(func():
+		_toast.visible = false
+		_process_toast_queue()
+	)
 
 
 func _cat_tag(c: String) -> String:
