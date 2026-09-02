@@ -104,9 +104,9 @@ func _run_all_tests() -> void:
 		_fail("슬롯 0 비활성")
 	
 	# 9. NPC
-	current_test = "NPC 11명 로드"
+	current_test = "NPC 13명 로드"
 	var npc_list = NPCManager.get_all_npcs()
-	if npc_list.size() >= 11:
+	if npc_list.size() >= 13:
 		_pass()
 	else:
 		_fail("NPC 수 = %d" % npc_list.size())

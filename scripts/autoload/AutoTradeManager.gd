@@ -34,6 +34,10 @@ func _empty_slot() -> Dictionary:
 	}
 
 
+func reset_slots() -> void:
+	for i in MAX_SLOTS:
+		slots[i] = _empty_slot()
+
 func get_slot(index: int) -> Dictionary:
 	if index < 0 or index >= MAX_SLOTS:
 		return {}
@@ -67,6 +71,14 @@ func check_and_execute() -> void:
 	for i in MAX_SLOTS:
 		var slot: Dictionary = slots[i]
 		if not slot["active"] or slot["stock_id"] == "":
+			continue
+
+		# 장마감 확인 — 코인은 24시간 거래 가능
+		var stock_cat: String = ""
+		var st: Dictionary = MarketSim.get_stock(slot["stock_id"])
+		if not st.is_empty():
+			stock_cat = st.get("category", "")
+		if stock_cat != "coin" and GameClockManager.current_phase != GameClockManager.Phase.MARKET:
 			continue
 
 		if _check_condition(slot):

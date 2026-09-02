@@ -17,7 +17,10 @@ func save_game() -> bool:
 		"market": _serialize_market(),
 		"autotrade": AutoTradeManager.slots,
 		"npc": NPCManager.serialize(),
-		"events": {"active": EventManager.get_active_events()},
+		"events": {
+			"active": EventManager.get_active_events(),
+			"news_cooldown": EventManager._news_cooldown.duplicate(true),
+		},
 		"passive_stats": {
 			"dividends": PassiveIncomeManager.get_total_dividends(),
 			"rental": PassiveIncomeManager.get_total_rental(),
@@ -27,6 +30,8 @@ func save_game() -> bool:
 		"quests": QuestManager.serialize(),
 		"businesses": BusinessManager.serialize(),
 		"clock": GameClockManager.serialize(),
+		"ipo": IPOManager.serialize(),
+		"net_worth_history": GameManager.serialize_net_worth_history(),
 		"timestamp": Time.get_unix_time_from_system(),
 	}
 
@@ -72,9 +77,22 @@ func load_game() -> bool:
 		NPCManager.deserialize(data["npc"])
 
 	# 이벤트 복원
-	if data.has("events") and data["events"].has("active"):
-		EventManager._active_events = data["events"]["active"]
-	
+	if data.has("events"):
+		if data["events"].has("active"):
+			EventManager._active_events = data["events"]["active"]
+		if data["events"].has("news_cooldown"):
+			EventManager._news_cooldown = data["events"]["news_cooldown"]
+
+	# 패시브 수익 통계 복원
+	if data.has("passive_stats"):
+		var ps: Dictionary = data["passive_stats"]
+		if ps.has("dividends"):
+			PassiveIncomeManager._total_dividends = float(ps["dividends"])
+		if ps.has("rental"):
+			PassiveIncomeManager._total_rental = float(ps["rental"])
+		if ps.has("interest"):
+			PassiveIncomeManager._total_interest = float(ps["interest"])
+
 	# 스토리 복원
 	if data.has("story"):
 		StoryManager.deserialize(data["story"])
@@ -90,6 +108,14 @@ func load_game() -> bool:
 	# 시계 복원
 	if data.has("clock"):
 		GameClockManager.deserialize(data["clock"])
+
+	# IPO 복원
+	if data.has("ipo"):
+		IPOManager.deserialize(data["ipo"])
+
+	# 순자산 히스토리 복원
+	if data.has("net_worth_history"):
+		GameManager.deserialize_net_worth_history(data["net_worth_history"])
 	
 	loaded.emit()
 	return true
@@ -104,18 +130,63 @@ func _serialize_market() -> Dictionary:
 	var result := {}
 	for stock_id in MarketSim.stocks:
 		var s: Dictionary = MarketSim.stocks[stock_id]
+		var hist: Array = s["history"].duplicate()
+		if hist.size() > 500:
+			hist = hist.slice(hist.size() - 500)
 		result[stock_id] = {
 			"price": s["price"],
 			"day_open": s["day_open"],
+			"volatility": s["volatility"],
+			"trend": s["trend"],
+			"change_pct": s["change_pct"],
+			"history": hist,
 		}
+	# _event_multipliers 직렬화
+	result["_event_multipliers"] = MarketSim._event_multipliers.duplicate(true)
+	# _daily_close + _daily_ohlc 직렬화 (500일 상한)
+	var ohlc_trimmed: Dictionary = {}
+	for sid in MarketSim._daily_ohlc:
+		var arr: Array = MarketSim._daily_ohlc[sid].duplicate(true)
+		if arr.size() > 500:
+			arr = arr.slice(arr.size() - 500)
+		ohlc_trimmed[sid] = arr
+	result["_daily_close"] = MarketSim.serialize_daily_close()
+	result["_daily_ohlc"] = ohlc_trimmed
 	return result
 
 
 func _deserialize_market(data: Dictionary) -> void:
+	# daily_close_history 복원 (먼저 추출)
+	if data.has("_daily_close"):
+		MarketSim.deserialize_daily_close(data["_daily_close"])
+	# _daily_ohlc 개별 복원 (500일 상한 적용)
+	if data.has("_daily_ohlc"):
+		for sid in data["_daily_ohlc"]:
+			var arr: Array = data["_daily_ohlc"][sid]
+			if arr.size() > 500:
+				arr = arr.slice(arr.size() - 500)
+			MarketSim._daily_ohlc[sid] = arr
+	# _event_multipliers 복원
+	if data.has("_event_multipliers"):
+		MarketSim._event_multipliers = data["_event_multipliers"].duplicate(true)
 	for stock_id in data:
+		if stock_id == "_daily_close" or stock_id == "_daily_ohlc" or stock_id == "_event_multipliers":
+			continue
 		if MarketSim.stocks.has(stock_id):
-			MarketSim.stocks[stock_id]["price"] = data[stock_id]["price"]
-			MarketSim.stocks[stock_id]["day_open"] = data[stock_id]["day_open"]
+			var saved: Dictionary = data[stock_id]
+			MarketSim.stocks[stock_id]["price"] = saved["price"]
+			MarketSim.stocks[stock_id]["day_open"] = saved["day_open"]
+			if saved.has("volatility"):
+				MarketSim.stocks[stock_id]["volatility"] = float(saved["volatility"])
+			if saved.has("trend"):
+				MarketSim.stocks[stock_id]["trend"] = float(saved["trend"])
+			if saved.has("change_pct"):
+				MarketSim.stocks[stock_id]["change_pct"] = float(saved["change_pct"])
+			if saved.has("history"):
+				var hist: Array = saved["history"]
+				if hist.size() > 500:
+					hist = hist.slice(hist.size() - 500)
+				MarketSim.stocks[stock_id]["history"] = hist
 
 
 func _deserialize_autotrade(data: Array) -> void:
@@ -149,13 +220,16 @@ func calculate_offline_rewards() -> Dictionary:
 	if elapsed < 60:
 		return {"cash": 0.0, "time_seconds": 0.0, "auto_trades": 0}
 
-	# 최대 8시간까지만 보상
-	var capped: float = minf(elapsed, 8 * 3600)
+	# 최대 24시간까지만 보상
+	var capped: float = minf(elapsed, 24 * 3600)
 
-	# 시간당 순자산의 2% 보상
+	# 시간당 순자산의 0.3% 보상 (일일 캡 2%)
 	var net_worth: float = GameManager.get_net_worth()
-	var rate := 0.02 / 3600.0  # 초당
+	var rate := 0.003 / 3600.0  # 초당
+	var daily_cap: float = net_worth * 0.02  # 일일 최대 2%
 	var reward: float = net_worth * rate * capped
+	if reward > daily_cap:
+		reward = daily_cap
 
 	# 자동매매 시뮬레이션
 	var ticks := int(capped / 2.0)  # 2초당 1틱

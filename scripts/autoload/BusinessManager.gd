@@ -19,6 +19,22 @@ var _owned: Dictionary = {}
 var _total_revenue: float = 0.0
 var _last_tick_revenue: float = 0.0
 
+# 주간 사업 이벤트: [{id, category, modifier, name}, ...] — 매주 3개, 7일 지속
+var _weekly_events: Array = []
+var _weekly_event_day: int = 0
+var _rng := RandomNumberGenerator.new()
+
+const WEEKLY_EVENT_POOL := [
+	{"id": "food_boom", "category": "food", "modifier": 1.20, "name": "요식업 호황"},
+	{"id": "food_bust", "category": "food", "modifier": 0.85, "name": "요식업 불황"},
+	{"id": "it_boom", "category": "it", "modifier": 1.20, "name": "IT 업황 개선"},
+	{"id": "it_bust", "category": "it", "modifier": 0.85, "name": "IT 투자심사 악화"},
+	{"id": "retail_boom", "category": "retail", "modifier": 1.20, "name": "소비 지출 확대"},
+	{"id": "retail_bust", "category": "retail", "modifier": 0.85, "name": "소매 소비 위축"},
+	{"id": "realestate_boom", "category": "realestate", "modifier": 1.20, "name": "부동산 경기 활황"},
+	{"id": "realestate_bust", "category": "realestate", "modifier": 0.85, "name": "부동산 경기 둔화"},
+]
+
 # 일일 캡
 var _daily_cap_pct: float = 0.15  # 순자산 대비 일일 사업 수익 한계
 
@@ -28,7 +44,7 @@ func _ready() -> void:
 
 
 func _load_data() -> void:
-	var data = _load_json("res://data/businesses.json")
+	var data = DataUtil.load_json("res://data/businesses.json")
 	if data:
 		_config = data.get("config", {})
 		_defs = data.get("businesses", [])
@@ -154,18 +170,25 @@ func _calc_business_daily_revenue(business_id: String) -> float:
 
 	var base: float = float(def.get("base_revenue_per_day", 0))
 
-	# 레벨 보너스
+	# 레벨 보너스 — 업그레이드당 효율 +20%
 	var level_bonus: float = float(_config.get("upgrade_revenue_bonus_per_level", 0.2))
-	var level_mult: float = 1.0 + level_bonus * (int(entry.get("level", 1)) - 1)
+	var level_mult: float = 1.0 + 0.20 * (int(entry.get("level", 1)) - 1)
 
-	# 직원 보너스
-	var emp_bonus: float = float(_config.get("employee_revenue_bonus", 0.05))
-	var emp_mult: float = 1.0 + emp_bonus * int(entry.get("employees", 0))
+	# 직원 보너스 — 1인당 효율 +10%
+	var emp_mult: float = 1.0 + 0.10 * int(entry.get("employees", 0))
 
 	# 이벤트 배율
 	var event_mult: float = float(entry.get("event_multiplier", 1.0))
 
-	return base * level_mult * emp_mult * event_mult
+	# 주간 사업 이벤트 modifier
+	var weekly_mult: float = _get_weekly_modifier(def.get("category", ""))
+
+	# 결혼 버프: 사업 수익 증가 (한서연)
+	var marriage_mult: float = 1.0
+	if NPCManager.has_marriage_buff("business_boost"):
+		marriage_mult = 1.0 + NPCManager.get_marriage_buff("business_boost")
+
+	return base * level_mult * emp_mult * event_mult * weekly_mult * marriage_mult
 
 
 ## 하루 경과 시 일괄 정산
@@ -221,7 +244,7 @@ func roll_daily_events() -> Array:
 	var chance: float = float(_config.get("event_chance_daily", 0.12))
 
 	for bid in _owned.keys():
-		if randf() > chance:
+		if _rng.randf() > chance:
 			continue
 		var event = _pick_event(bid)
 		if event.is_empty():
@@ -249,7 +272,7 @@ func _pick_event(business_id: String) -> Dictionary:
 	if pool.is_empty() or total_weight <= 0:
 		return {}
 
-	var roll: int = randi() % total_weight
+	var roll: int = _rng.randi() % total_weight
 	var acc: int = 0
 	for ev in pool:
 		acc += int(ev.get("weight", 10))
@@ -314,6 +337,10 @@ func _count_category(cat: String) -> int:
 func get_all_defs() -> Array:
 	return _defs
 
+## 사업 정의 조회 (public wrapper)
+func get_def(business_id: String) -> Dictionary:
+	return _get_def(business_id)
+
 func get_owned() -> Dictionary:
 	return _owned
 
@@ -348,6 +375,13 @@ func get_total_daily_revenue() -> float:
 		total += _calc_business_daily_revenue(bid)
 	return total
 
+func reset_owned() -> void:
+	_owned.clear()
+	_total_revenue = 0.0
+	_last_tick_revenue = 0.0
+	_weekly_events.clear()
+	_weekly_event_day = 0
+
 func get_total_revenue_earned() -> float:
 	return _total_revenue
 
@@ -371,12 +405,52 @@ func get_upgrade_cost(business_id: String) -> float:
 func serialize() -> Dictionary:
 	return {
 		"owned": _owned.duplicate(true),
-		"total_revenue": _total_revenue
+		"total_revenue": _total_revenue,
+		"weekly_events": _weekly_events.duplicate(true),
+		"weekly_event_day": _weekly_event_day,
 	}
 
 func deserialize(data: Dictionary) -> void:
 	_owned = data.get("owned", {}).duplicate(true)
 	_total_revenue = float(data.get("total_revenue", 0))
+	_weekly_events = data.get("weekly_events", []).duplicate(true)
+	_weekly_event_day = int(data.get("weekly_event_day", 0))
+
+
+## 주간 사업 이벤트 modifier 반환 (카테고리 기준)
+func _get_weekly_modifier(category: String) -> float:
+	var mult: float = 1.0
+	for ev in _weekly_events:
+		if ev.get("category", "") == category:
+			mult *= float(ev.get("modifier", 1.0))
+	return mult
+
+
+## 매 7일마다 주간 이벤트 갱신 — 3개 중복 없이 선택
+func roll_weekly_events(current_day: int) -> void:
+	if current_day - _weekly_event_day < 7 and not _weekly_events.is_empty():
+		return  # 아직 갱신 주기 아님
+	_weekly_event_day = current_day
+	_weekly_events.clear()
+	_rng.seed = Time.get_ticks_msec()
+	var pool: Array = WEEKLY_EVENT_POOL.duplicate()
+	# 같은 카테고리의 boom/bust가 동시에 선택되지 않게
+	var used_categories: Dictionary = {}
+	var picked: int = 0
+	while picked < 3 and pool.size() > 0:
+		var idx: int = _rng.randi() % pool.size()
+		var ev: Dictionary = pool[idx]
+		var cat: String = ev.get("category", "")
+		if not used_categories.has(cat):
+			_weekly_events.append(ev)
+			used_categories[cat] = true
+			picked += 1
+		pool.remove_at(idx)
+
+
+## 현재 활성 주간 이벤트 목록
+func get_weekly_events() -> Array:
+	return _weekly_events
 
 
 func _fail(reason: String) -> Dictionary:
@@ -398,13 +472,3 @@ func _fmt(amount: float) -> String:
 	elif ab >= 1_000:
 		return "%s%d천" % [sign, int(ab / 1_000)]
 	return "%s%d" % [sign, int(ab)]
-
-func _load_json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		return null
-	var text := file.get_as_text()
-	file.close()
-	return JSON.parse_string(text)

@@ -5,36 +5,66 @@ extends Control
 
 const MAIN_SCENE := "res://scenes/main.tscn"
 
-# 색상 — 파란색/회색/흰색 계열
-const COL_BG := Color(0.063, 0.067, 0.078, 1)
-const COL_PANEL := Color(0.106, 0.110, 0.122, 1)
-const COL_ACCENT := Color(0.20, 0.56, 0.85, 1)
-const COL_UP := Color(0.15, 0.65, 0.39, 1)
-const COL_DOWN := Color(0.80, 0.27, 0.27, 1)
-const COL_TEXT := Color(0.82, 0.82, 0.85, 1)
-const COL_TEXT_DIM := Color(0.50, 0.50, 0.55, 1)
-const COL_GOLD := Color(0.85, 0.70, 0.30, 1)
-const COL_GRID := Color(0.10, 0.12, 0.16, 0.5)  # 희미한 그리드
+# 색상 — 다크 도트 타이쿤 (밝은 톤)
+const COL_BG := Color(0.118, 0.118, 0.180, 1)     # #1E1E2E
+const COL_PANEL := Color(0.165, 0.165, 0.239, 1)  # #2A2A3D
+const COL_ACCENT := Color(0.15, 0.78, 0.85, 1)    # #26C6DA
+const COL_UP := Color(0.40, 0.73, 0.42, 1)        # #66BB6A
+const COL_DOWN := Color(1.0, 0.44, 0.26, 1)       # #FF7043
+const COL_TEXT := Color(0.88, 0.88, 0.92, 1)      # #E0E0EB
+const COL_TEXT_DIM := Color(0.55, 0.55, 0.62, 1)  # #8C8C9E
+const COL_GOLD := Color(1.0, 0.84, 0.31, 1)       # #FFD54F
+const COL_GRID := Color(0.16, 0.16, 0.24, 0.5)    # 희미한 그리드
+const COL_BORDER := Color(0.239, 0.239, 0.333, 1) # #3D3D55
 
 var _container: VBoxContainer
 var _load_button: Button
 var _popup: PanelContainer
 var _grid_bg: Control  # 커스텀 그리드 배경
+var _pixel_font: FontFile = null
+var _bgm_btn: TextureButton
 
 
 func _ready() -> void:
+	_load_pixel_font()
 	_setup_window()
 	_build_ui()
+	AudioManager.play_bgm()
+	_add_bgm_button()
+
+
+## 둥근모꼴 폰트 로드
+func _load_pixel_font() -> void:
+	var font_path := "res://assets/fonts/neodgm.ttf"
+	if FileAccess.file_exists(font_path):
+		var loaded: Variant = load(font_path)
+		if loaded is FontFile:
+			_pixel_font = loaded
+			# 글로벌 테마 적용
+			var theme := Theme.new()
+			theme.set_font("font", "Label", _pixel_font)
+			theme.set_font("font", "Button", _pixel_font)
+			theme.default_font_size = 16
+			self.theme = theme
 
 
 func _setup_window() -> void:
 	var screen_size := DisplayServer.screen_get_size()
-	var win_w := int(screen_size.x * 0.85)
-	var win_h := int(screen_size.y * 0.85)
-	DisplayServer.window_set_size(Vector2i(win_w, win_h))
+	# 1280x720 뷰포트에 최적화된 16:9 창 크기 (화면의 75% 이하로 제한)
+	var target_w := 1600
+	var target_h := 900
+	# 화면이 작은 경우 더 작은 크기 사용
+	if screen_size.x < 1920:
+		target_w = 1280
+		target_h = 720
+	var max_w := int(screen_size.x * 0.92)
+	var max_h := int(screen_size.y * 0.90)
+	var final_w := mini(target_w, max_w)
+	var final_h := mini(target_h, max_h)
+	DisplayServer.window_set_size(Vector2i(final_w, final_h))
 	DisplayServer.window_set_position(Vector2i(
-		(screen_size.x - win_w) / 2,
-		(screen_size.y - win_h) / 2
+		(screen_size.x - final_w) / 2,
+		(screen_size.y - final_h) / 2
 	))
 
 
@@ -94,10 +124,10 @@ func _build_ui() -> void:
 
 	# ── 타이틀 ──
 	var title := Label.new()
-	title.text = "주식잡스"
+	title.text = "스톡 타이쿤"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", fs_title)
-	title.add_theme_color_override("font_color", COL_ACCENT)
+	title.add_theme_color_override("font_color", COL_GOLD)
 	_container.add_child(title)
 
 	# ── 영문 부제 ──
@@ -396,3 +426,25 @@ func _fmt_won(amount: float) -> String:
 	elif ab >= 10_000:
 		return "%s%.1f만원" % [sign, ab / 10_000]
 	return "%s%.0f원" % [sign, ab]
+
+## ─── BGM 토글 버튼 ──────────────────────────
+func _add_bgm_button() -> void:
+	_bgm_btn = TextureButton.new()
+	var tex_on: ImageTexture = AudioManager.get_icon_on()
+	if tex_on:
+		_bgm_btn.texture_normal = tex_on
+	_bgm_btn.anchor_right = 1.0
+	_bgm_btn.anchor_top = 0.0
+	_bgm_btn.offset_right = -8
+	_bgm_btn.offset_top = 8
+	_bgm_btn.custom_minimum_size = Vector2(40, 40)
+	_bgm_btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_bgm_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	_bgm_btn.pressed.connect(_on_bgm_toggle)
+	add_child(_bgm_btn)
+
+func _on_bgm_toggle() -> void:
+	var is_on: bool = AudioManager.toggle_bgm()
+	var tex: ImageTexture = AudioManager.get_icon_on() if is_on else AudioManager.get_icon_off()
+	if tex:
+		_bgm_btn.texture_normal = tex

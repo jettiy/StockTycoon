@@ -2,27 +2,33 @@
   "rivals": [
     {
       "id": "goldberg",
-      "name": "골드버그",
-      "role": "외국계 펀드매니저",
-      "desc": "월스트리트 출신. 단기 수익률의 제왕.",
+      "name": "골드버그 딜러",
+      "role": "카지노 딜러",
+      "desc": "월스트리트를 떠돌던 카드 딜러. 블랙잭으로 결투를 신청한다.",
+      "service_desc": "블랙잭 대결 — 승리 시 베팅금 1.8배, 무승부 시 환불",
       "avatar_color": "#D4AF37",
-      "initial_affinity": 0
+      "initial_affinity": 0,
+      "game_type": "blackjack"
     },
     {
       "id": "queen_realtime",
-      "name": "실시간 퀸",
-      "role": "데이트레이딩 여왕",
-      "desc": "하루 500거래. 실시간 차트 장인.",
+      "name": "래더 퀸",
+      "role": "사다리타기 도박의 여왕",
+      "desc": "사다리를 타고 운명을 가르는 도박의 여왕. 선택은 세 개, 결과는 하나.",
+      "service_desc": "사다리타기 베팅 — 당첨 시 베팅금 3배 (하루 1회)",
       "avatar_color": "#E91E8C",
-      "initial_affinity": 0
+      "initial_affinity": 0,
+      "game_type": "ladder"
     },
     {
       "id": "algo_k",
       "name": "알고리즘 K",
-      "role": "AI 퀀트 개발자",
-      "desc": "자동매매 알고리즘으로 수익 창출.",
+      "role": "주사위 확률론자",
+      "desc": "확률을 믿는 퀀트. 주사위 승부로 자존심을 건다.",
+      "service_desc": "주사위 2개 합계 대결 — 높은 쪽이 승리. 승리 시 베팅금 1.8배",
       "avatar_color": "#00BCD4",
-      "initial_affinity": 0
+      "initial_affinity": 0,
+      "game_type": "dice"
     }
   ],
   "helpers": [
@@ -31,30 +37,55 @@
       "name": "김정보",
       "role": "정보통 중개인",
       "desc": "증권가 소문의 원조. 유료로 내부 정보 제공.",
+      "service_desc": "다가오는 뉴스 이벤트를 미리 알려줌",
       "avatar_color": "#8BC34A",
       "initial_affinity": 20,
       "service_cost": 500000,
-      "service_desc": "다가오는 뉴스 이벤트를 미리 알려줌"
+      "service_type": "early_news"
     },
     {
       "id": "ajumma_broker",
       "name": "아줌마 중개인",
       "role": "수수료 할인 브로커",
       "desc": "20년 차 영업왕. 수수료를 깎아준다.",
+      "service_desc": "호감도 50 이상 시 수수료 20% 할인 (7일 지속)",
       "avatar_color": "#FF9800",
       "initial_affinity": 30,
       "service_cost": 0,
-      "service_desc": "호감도 50 이상 시 수수료 20% 할인"
+      "service_type": "fee_discount"
     },
     {
       "id": "taxi_driver",
       "name": "택시기사",
       "role": "소문꾼",
       "desc": "매일 다른 승객에게 소문을 듣는다.",
+      "service_desc": "무작위 주식 팁 제공 (가끔 핵심 정보)",
       "avatar_color": "#FFC107",
       "initial_affinity": 40,
       "service_cost": 0,
-      "service_desc": "무작위 팁 제공 (가끔 핵심 정보)"
+      "service_type": "random_tip"
+    },
+    {
+      "id": "do_yoonjae",
+      "name": "도윤재",
+      "role": "변호사",
+      "desc": "내부자 거래 한 번쯤은 커버해 줄 남자.",
+      "service_desc": "내부자거래 법적 면책 1회 (호감도 60 이상)",
+      "avatar_color": "#3F51B5",
+      "initial_affinity": 10,
+      "service_cost": 20000000,
+      "service_type": "legal_immunity"
+    },
+    {
+      "id": "kang_siu",
+      "name": "강시우",
+      "role": "퀀트 개발자",
+      "desc": "조용하지만 자동매매의 천재.",
+      "service_desc": "자동매매 수익률 +10% 강화 (호감도 60 이상, 7일 지속)",
+      "avatar_color": "#00BCD4",
+      "initial_affinity": 10,
+      "service_cost": 15000000,
+      "service_type": "autotrade_boost"
     }
   ],
   "marriage_targets": [
@@ -63,6 +94,7 @@
       "name": "채인영",
       "role": "세무회계사",
       "desc": "차가운 미인. 절세의 여왕.",
+      "service_desc": "결혼 시: 세금 30% 절약 / 디버프: 정보력 회복 -1",
       "avatar_color": "#7C4DFF",
       "buff": "세금 30% 절약",
       "debuff": "정보력 회복 -1",
@@ -70,29 +102,17 @@
       "buff_value": 0.3,
       "debuff_type": "energy_regen",
       "debuff_value": -1,
-      "required_affinity": 80,
-      "gift_cost": 10000000
-    },
-    {
-      "id": "do_yoonjae",
-      "name": "도윤재",
-      "role": "변호사",
-      "desc": "내부자 거래 한 번쯤은 커버해 줄 남자.",
-      "avatar_color": "#3F51B5",
-      "buff": "내부자거래 면책 1회",
-      "debuff": "월급 -20%",
-      "buff_type": "legal_immunity",
-      "buff_value": 1,
-      "debuff_type": "salary_cut",
-      "debuff_value": 0.2,
-      "required_affinity": 80,
-      "gift_cost": 15000000
+      "required_affinity": 100,
+      "gift_cost": 10000000,
+      "date_cost": 5000000,
+      "initial_affinity": 0
     },
     {
       "id": "seo_harin",
       "name": "서하린",
       "role": "경제기자",
       "desc": "뉴스보다 빠른 선입수의 여왕.",
+      "service_desc": "결혼 시: 뉴스 선입수 확률 +50% / 디버프: 수수료 +10%",
       "avatar_color": "#E91E63",
       "buff": "뉴스 선입수 확률 +50%",
       "debuff": "수수료 +10%",
@@ -100,29 +120,17 @@
       "buff_value": 0.5,
       "debuff_type": "fee_increase",
       "debuff_value": 0.1,
-      "required_affinity": 75,
-      "gift_cost": 8000000
-    },
-    {
-      "id": "kang_siu",
-      "name": "강시우",
-      "role": "퀀트 개발자",
-      "desc": "조용하지만 자동매매의 천재.",
-      "avatar_color": "#00BCD4",
-      "buff": "자동매매 슬롯 +2",
-      "debuff": "수동매매 수익 -15%",
-      "buff_type": "extra_slots",
-      "buff_value": 2,
-      "debuff_type": "manual_penalty",
-      "debuff_value": 0.15,
-      "required_affinity": 75,
-      "gift_cost": 12000000
+      "required_affinity": 100,
+      "gift_cost": 8000000,
+      "date_cost": 4000000,
+      "initial_affinity": 0
     },
     {
       "id": "yoon_chaea",
       "name": "윤채아",
       "role": "성형외과 의사",
       "desc": "돈 많고 예쁜 의사. 체력의 여왕.",
+      "service_desc": "결혼 시: 체력 +50%, 주간 보너스 / 디버프: 정보력 -2",
       "avatar_color": "#FF4081",
       "buff": "체력 +50%, 주간 보너스",
       "debuff": "정보력 -2",
@@ -130,8 +138,46 @@
       "buff_value": 0.5,
       "debuff_type": "energy_penalty",
       "debuff_value": 2,
-      "required_affinity": 70,
-      "gift_cost": 20000000
+      "required_affinity": 100,
+      "gift_cost": 20000000,
+      "date_cost": 8000000,
+      "initial_affinity": 0
+    },
+    {
+      "id": "baek_yerin",
+      "name": "백예린",
+      "role": "프라이빗 뱅커",
+      "desc": "자산관리의 달인. 돈이 돈을 벌게 해준다.",
+      "service_desc": "결혼 시: 예금 이자율 +50% / 디버프: 수수료 +10%",
+      "avatar_color": "#26A69A",
+      "buff": "예금 이자율 +50%",
+      "debuff": "수수료 +10%",
+      "buff_type": "interest_boost",
+      "buff_value": 0.5,
+      "debuff_type": "fee_increase",
+      "debuff_value": 0.1,
+      "required_affinity": 100,
+      "gift_cost": 15000000,
+      "date_cost": 6000000,
+      "initial_affinity": 0
+    },
+    {
+      "id": "han_seoyeon",
+      "name": "한서연",
+      "role": "AI 스타트업 CEO",
+      "desc": "혁신적인 비전. 사업 수익을 극대화한다.",
+      "service_desc": "결혼 시: 사업 수익 +30% / 디버프: 주식 변동성 +20%",
+      "avatar_color": "#AB47BC",
+      "buff": "사업 수익 +30%",
+      "debuff": "주식 변동성 +20%",
+      "buff_type": "business_boost",
+      "buff_value": 0.3,
+      "debuff_type": "volatility_increase",
+      "debuff_value": 0.2,
+      "required_affinity": 100,
+      "gift_cost": 18000000,
+      "date_cost": 7000000,
+      "initial_affinity": 0
     }
   ]
 }

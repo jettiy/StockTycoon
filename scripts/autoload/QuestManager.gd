@@ -59,13 +59,13 @@ func _ready() -> void:
 
 
 func _load_data() -> void:
-	var qdata = _load_json("res://data/quests.json")
+	var qdata = DataUtil.load_json("res://data/quests.json")
 	if qdata:
 		_daily_defs = qdata.get("daily_quests", [])
 		_weekly_defs = qdata.get("weekly_quests", [])
 		_monthly_defs = qdata.get("monthly_quests", [])
 
-	var adata = _load_json("res://data/achievements.json")
+	var adata = DataUtil.load_json("res://data/achievements.json")
 	if adata:
 		_achievement_defs = adata.get("achievements", [])
 
@@ -403,6 +403,26 @@ func get_pending_rewards() -> Array:
 func clear_pending_rewards() -> void:
 	_pending_rewards.clear()
 
+func reset_all() -> void:
+	_daily_progress.clear()
+	_weekly_progress.clear()
+	_monthly_progress.clear()
+	_daily_trade_count = 0
+	_daily_profit = 0.0
+	_daily_news_checks = 0
+	_daily_npc_interacts = 0
+	_daily_dividends = 0.0
+	_daily_rank_ups = 0
+	_weekly_trade_count = 0
+	_weekly_profit = 0.0
+	_weekly_dividends = 0.0
+	_monthly_trade_count = 0
+	_monthly_npc_interacts = 0
+	_month_start_net_worth = 0.0
+	_last_daily_reset_day = 0
+	_last_weekly_reset_day = 0
+	_last_monthly_reset_day = 0
+
 func get_total_trades() -> int:
 	return _total_trades
 
@@ -443,13 +463,3 @@ func deserialize(data: Dictionary) -> void:
 	_last_weekly_reset_day = int(data.get("last_weekly_reset", 0))
 	_last_monthly_reset_day = int(data.get("last_monthly_reset", 0))
 
-
-func _load_json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		return null
-	var text := file.get_as_text()
-	file.close()
-	return JSON.parse_string(text)

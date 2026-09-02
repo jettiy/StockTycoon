@@ -64,49 +64,56 @@
       "name": "고시원",
       "price": 0,
       "energy_bonus": 0,
-      "happiness": 0
+      "happiness": 0,
+      "desc": "좁은 방 하나. 임대수익 없음. 시작점."
     },
     {
       "id": "wolset",
       "name": "월셋",
       "price": 5000000,
       "energy_bonus": 0,
-      "happiness": 5
+      "happiness": 5,
+      "desc": "월세 아파트. 행복도 +5. 임대수익 없음."
     },
     {
       "id": "oneroom",
       "name": "원룸",
       "price": 20000000,
       "energy_bonus": 1,
-      "happiness": 15
+      "happiness": 15,
+      "desc": "체력 회복 +1, 행복도 +15. 일일 임대수익 8천원."
     },
     {
       "id": "tworoom",
       "name": "투룸",
       "price": 50000000,
       "energy_bonus": 1,
-      "happiness": 25
+      "happiness": 25,
+      "desc": "체력 회복 +1, 행복도 +25. 일일 임대수익 2만원."
     },
     {
       "id": "apartment",
       "name": "아파트",
       "price": 200000000,
       "energy_bonus": 2,
-      "happiness": 40
+      "happiness": 40,
+      "desc": "체력 회복 +2, 행복도 +40. 일일 임대수익 6만원."
     },
     {
       "id": "penthouse",
       "name": "펜트하우스",
       "price": 1000000000,
       "energy_bonus": 3,
-      "happiness": 60
+      "happiness": 60,
+      "desc": "체력 회복 +3, 행복도 +60. 일일 임대수익 25만원."
     },
     {
       "id": "island",
       "name": "섬",
       "price": 5000000000,
       "energy_bonus": 5,
-      "happiness": 100
+      "happiness": 100,
+      "desc": "체력 회복 +5, 행복도 +100. 일일 임대수익 100만원."
     }
   ],
   "vehicles": [
@@ -115,49 +122,63 @@
       "name": "자전거",
       "price": 0,
       "energy_bonus": 0,
-      "happiness": 0
+      "happiness": 0,
+      "date_cost_discount": 0,
+      "desc": "기본 이동수단. 데이트 비용 절감 없음."
     },
     {
       "id": "usedcar",
       "name": "중고차",
       "price": 5000000,
       "energy_bonus": 0,
-      "happiness": 5
+      "happiness": 0,
+      "date_cost_discount": 0.02,
+      "desc": "데이트/선물 비용 -2%. 허름하지만 실용적."
     },
     {
       "id": "semimid",
       "name": "준중형",
       "price": 25000000,
       "energy_bonus": 0,
-      "happiness": 10
+      "happiness": 0,
+      "date_cost_discount": 0.04,
+      "desc": "데이트/선물 비용 -4%. 무난한 일상용 차량."
     },
     {
       "id": "sedan",
       "name": "세단",
       "price": 70000000,
-      "energy_bonus": 1,
-      "happiness": 20
+      "energy_bonus": 0,
+      "happiness": 0,
+      "date_cost_discount": 0.06,
+      "desc": "데이트/선물 비용 -6%. 격식 있는 데이트의 기본."
     },
     {
       "id": "sportscar",
       "name": "스포츠카",
       "price": 200000000,
-      "energy_bonus": 1,
-      "happiness": 35
+      "energy_bonus": 0,
+      "happiness": 0,
+      "date_cost_discount": 0.08,
+      "desc": "데이트/선물 비용 -8%. 호감도 상승 효과 배가."
     },
     {
       "id": "supercar",
       "name": "슈퍼카",
       "price": 500000000,
-      "energy_bonus": 2,
-      "happiness": 55
+      "energy_bonus": 0,
+      "happiness": 0,
+      "date_cost_discount": 0.12,
+      "desc": "데이트/선물 비용 -12%. 부의 상징으로 호감도 급상승."
     },
     {
       "id": "helicopter",
       "name": "헬기",
       "price": 2000000000,
-      "energy_bonus": 5,
-      "happiness": 100
+      "energy_bonus": 0,
+      "happiness": 0,
+      "date_cost_discount": 0.15,
+      "desc": "데이트/선물 비용 -15%. 하늘을 나는 극강의 부."
     }
   ],
   "market": {

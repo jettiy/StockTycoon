@@ -1,165 +1,97 @@
 {
   "news": [
-    {
-      "id": "samsung_ai_breakthrough",
-      "title": "삼성전자, 차세대 AI 반도체 발표",
-      "desc": "혁신적인 2nm 공정 AI 칩 발표. 시장 들끓어오름.",
-      "stock_ids": ["samsung", "skhynix"],
-      "impact": 0.6,
-      "weight": 10,
-      "category": "tech"
-    },
-    {
-      "id": "nvidia_earnings_beat",
-      "title": "엔비디아, 분기 실적 대폭 상회",
-      "desc": "AI 수요 폭증으로 예상치 200% 초과 달성.",
-      "stock_ids": ["nvidia", "apple", "microsoft"],
-      "impact": 0.8,
-      "weight": 8,
-      "category": "earnings"
-    },
-    {
-      "id": "tesla_robo_taxi",
-      "title": "테슬라, 로보택시 전국 확대 발표",
-      "desc": "자율주행 레벨5 승인. 주가 급등 예상.",
-      "stock_ids": ["tesla"],
-      "impact": 0.7,
-      "weight": 6,
-      "category": "news"
-    },
-    {
-      "id": "bitcoin_etf_approval",
-      "title": "비트코인 현물 ETF 추가 승인",
-      "desc": "기관 자금 대거 유입. 코인 시장 전체 강세.",
-      "stock_ids": ["bitcoin", "ethereum", "solana"],
-      "impact": 0.9,
-      "weight": 5,
-      "category": "crypto"
-    },
-    {
-      "id": "doge_celebrity_tweet",
-      "title": "유력 인사, 도지코인 언급 트윗",
-      "desc": "한 트윗에 도지코인 30% 급등.",
-      "stock_ids": ["dogecoin"],
-      "impact": 0.5,
-      "weight": 7,
-      "category": "crypto"
-    },
-    {
-      "id": "alteogen_record_profit",
-      "title": "알테오젠, 신약 파이프라인 임상 통과",
-      "desc": "대출 성장 + 수익성 개선. 금융주 강세.",
-      "stock_ids": ["alteogen"],
-      "impact": 0.4,
-      "weight": 8,
-      "category": "earnings"
-    },
-    {
-      "id": "apple_vision_pro2",
-      "title": "애플, 비전 프로 2세대 발표",
-      "desc": "대중화 가격대 MR 기기. 사전 예약 500만대.",
-      "stock_ids": ["apple", "google", "meta"],
-      "impact": 0.5,
-      "weight": 7,
-      "category": "product"
-    },
-    {
-      "id": "market_crash_warning",
-      "title": "미국 연준, 금리 인상 시사",
-      "desc": "인플레이션 우려로 전 시장 급락.",
-      "stock_ids": ["apple", "tesla", "nvidia", "microsoft", "meta", "amazon", "google"],
-      "impact": -0.7,
-      "weight": 4,
-      "category": "macro"
-    },
-    {
-      "id": "korea_regulation",
-      "title": "한국, 반도체 수출 규제 완화",
-      "desc": "정부 지원 정책. 한국 반도체주 일제히 상승.",
-      "stock_ids": ["samsung", "skhynix"],
-      "impact": 0.3,
-      "weight": 9,
-      "category": "policy"
-    },
-    {
-      "id": "amazon_holiday_sales",
-      "title": "아마존, 연말 시즌 매출 신기록",
-      "desc": "블랙프라이데이 사상 최대 규모 판매.",
-      "stock_ids": ["amazon"],
-      "impact": 0.35,
-      "weight": 8,
-      "category": "earnings"
-    }
+    {"id": "samsung_ai_chip", "title": "삼성전자, 2nm AI 반도체 양산 성공", "desc": "차세대 공정 양산 개시. 파운드리 수주 폭증.", "stock_ids": ["samsung", "skhynix"], "impact": 0.6, "weight": 10, "category": "tech"},
+    {"id": "samsung_galaxy_hit", "title": "갤럭시 S 시리즈 사상 최대 판매", "desc": "신형 스마트폰 전 세계 품절 대란.", "stock_ids": ["samsung"], "impact": 0.4, "weight": 8, "category": "product"},
+    {"id": "samsung_battery_fire", "title": "삼성 SDI 배터리 화재 이슈", "desc": "품질 이슈로 배터리 사업 타격 우려.", "stock_ids": ["samsung", "ecopro"], "impact": -0.4, "weight": 6, "category": "risk"},
+    {"id": "samsung_buyback", "title": "삼성전자, 자사주 대량 매입 발표", "desc": "10조원 규모 자사주 소각. 주가 급등.", "stock_ids": ["samsung"], "impact": 0.5, "weight": 7, "category": "policy"},
+
+    {"id": "skhynix_hbm", "title": "SK하이닉스, HBM4 양산 돌입", "desc": "AI 반도체 핵심 메모리 독점 공급 체제.", "stock_ids": ["skhynix", "samsung"], "impact": 0.7, "weight": 9, "category": "tech"},
+    {"id": "skhynix_dr glut", "title": "DRAM 과공급 우려 확산", "desc": "중국 증설로 메모리 가격 하락 압력.", "stock_ids": ["skhynix", "samsung"], "impact": -0.5, "weight": 5, "category": "macro"},
+    {"id": "skhynix_record_quarter", "title": "SK하이닉스, 사상 최대 분기 영업이익", "desc": "AI 수요 폭발로 역대 최대 실적.", "stock_ids": ["skhynix"], "impact": 0.5, "weight": 8, "category": "earnings"},
+
+    {"id": "celltrion_biosimilar", "title": "셀트리온, 바이오시밀러 미국 허가 획득", "desc": "FDA 승인으로 북미 시장 진출 확정.", "stock_ids": ["celltrion"], "impact": 0.5, "weight": 8, "category": "product"},
+    {"id": "celltrion_clinical_fail", "title": "셀트리온, 신약 임상 3상 실패", "desc": "차세대 파이프라인 임상 결과 부진.", "stock_ids": ["celltrion"], "impact": -0.5, "weight": 5, "category": "risk"},
+    {"id": "celltrion_contract", "title": "셀트리온, 다국적 제약사와 5천억 계약", "desc": "수출 물량 확대로 매출 급증 예상.", "stock_ids": ["celltrion"], "impact": 0.35, "weight": 7, "category": "earnings"},
+
+    {"id": "alteogen_patent", "title": "알테오젠, ASC 접착제 특허 등록", "desc": "핵심 기술 특허 확보. 기술료 수익 기대.", "stock_ids": ["alteogen"], "impact": 0.6, "weight": 7, "category": "tech"},
+    {"id": "alteogen_partnership", "title": "알테오젠, 글로벌 제약사와 라이선스 계약", "desc": "플랫폼 기술 글로벌 공급 확정.", "stock_ids": ["alteogen"], "impact": 0.45, "weight": 8, "category": "earnings"},
+    {"id": "alteogen_dilution", "title": "알테오젠, 대규모 유상증자 발표", "desc": "지분 희석 우려로 단기 조정.", "stock_ids": ["alteogen"], "impact": -0.3, "weight": 5, "category": "risk"},
+
+    {"id": "ecopro_cathode", "title": "에코프로, 캐소드 신공장 준공", "desc": "유럽 전기차 시장 공격 진출.", "stock_ids": ["ecopro"], "impact": 0.5, "weight": 7, "category": "product"},
+    {"id": "ecopro_ev_slowdown", "title": "전기차 수요 둔화 우려", "desc": "글로벌 전기차 성장세 둔화. 배터리주 하락.", "stock_ids": ["ecopro"], "impact": -0.5, "weight": 6, "category": "macro"},
+    {"id": "ecopro_china_order", "title": "에코프로, 중국 완성차업체 대형 수주", "desc": "중국 시장 진출로 매출 확대.", "stock_ids": ["ecopro"], "impact": 0.4, "weight": 6, "category": "earnings"},
+
+    {"id": "nvidia_earnings_beat", "title": "엔비디아, 분기 실적 예상치 200% 초과", "desc": "AI 수요 폭증으로 역대 최대 실적.", "stock_ids": ["nvidia", "microsoft", "google"], "impact": 0.8, "weight": 8, "category": "earnings"},
+    {"id": "nvidia_chip_ban", "title": "미국, 중국 반도체 수출 제한 강화", "desc": "최첨단 칩 수출 금지. 매출 타격 우려.", "stock_ids": ["nvidia", "apple"], "impact": -0.5, "weight": 5, "category": "policy"},
+    {"id": "nvidia_datacenter", "title": "엔비디아, 차세대 데이터센터 칩 발표", "desc": "H100 후속 모델 성능 3배 향상.", "stock_ids": ["nvidia"], "impact": 0.55, "weight": 7, "category": "tech"},
+    {"id": "nvidia_stock_split", "title": "엔비디아, 10:1 주식 분할 발표", "desc": "소액 투자자 접근성 개선. 수요 급증.", "stock_ids": ["nvidia"], "impact": 0.3, "weight": 6, "category": "policy"},
+
+    {"id": "apple_vision_pro2", "title": "애플, 비전 프로 2세대 대중화 발표", "desc": "절반 가격으로 MR 기기 보급화.", "stock_ids": ["apple"], "impact": 0.5, "weight": 7, "category": "product"},
+    {"id": "apple_china_ban", "title": "중국, 공공기관 아이폰 사용 금지", "desc": "중국 시장 점유율 하락 우려.", "stock_ids": ["apple"], "impact": -0.45, "weight": 5, "category": "policy"},
+    {"id": "apple_services_record", "title": "애플, 서비스 부문 사상 최대 매출", "desc": "앱스토어, 클라우드 수익 급증.", "stock_ids": ["apple"], "impact": 0.35, "weight": 8, "category": "earnings"},
+    {"id": "apple_ai_siri", "title": "애플, AI 시리 탑재 발표", "desc": "온디바이스 AI로 차세대 경험 제공.", "stock_ids": ["apple"], "impact": 0.4, "weight": 7, "category": "tech"},
+
+    {"id": "tesla_robo_taxi", "title": "테슬라, 로보택시 전국 확대", "desc": "완전자율주행 승인으로 모빌리티 혁명.", "stock_ids": ["tesla"], "impact": 0.7, "weight": 6, "category": "product"},
+    {"id": "tesla_recall", "title": "테슬라, 대규모 리콜 발표", "desc": "오토 파일럿 결함. 200만대 리콜.", "stock_ids": ["tesla"], "impact": -0.5, "weight": 5, "category": "risk"},
+    {"id": "tesla_delivery_beat", "title": "테슬라, 분기 배달량 사상 최대", "desc": "생산 능력 확대로 기록적 인도.", "stock_ids": ["tesla"], "impact": 0.45, "weight": 7, "category": "earnings"},
+    {"id": "tesla_musk_selling", "title": "머스크, 대량 주식 매도", "desc": "CEO 대량 매도로 투자심리 위축.", "stock_ids": ["tesla"], "impact": -0.35, "weight": 4, "category": "risk"},
+
+    {"id": "microsoft_ai_copilot", "title": "마이크로소프트, 코파일럿 기업 도입 급증", "desc": "오피스 AI 연동으로 기업 매출 폭증.", "stock_ids": ["microsoft"], "impact": 0.5, "weight": 8, "category": "product"},
+    {"id": "microsoft_activision", "title": "마이크로소프트, 액티비전 합병 완료", "desc": "게임 산업 최대 M&A 성사.", "stock_ids": ["microsoft"], "impact": 0.35, "weight": 6, "category": "earnings"},
+    {"id": "microsoft_outage", "title": "글로벌 클라우드 대규모 장애", "desc": "Azure 서비스 중단. 신뢰성 타격.", "stock_ids": ["microsoft"], "impact": -0.3, "weight": 4, "category": "risk"},
+
+    {"id": "meta_metaverse_pivot", "title": "메타, 메타버스 투자 축소 발표", "desc": "VR 사업 적자 축소. 본업 집중 선언.", "stock_ids": ["meta"], "impact": 0.3, "weight": 6, "category": "policy"},
+    {"id": "meta_ad_growth", "title": "메타, 광고 매출 사상 최대", "desc": "AI 추천 알고리즘으로 체류시간 증가.", "stock_ids": ["meta"], "impact": 0.4, "weight": 7, "category": "earnings"},
+    {"id": "meta_privacy_fine", "title": "메타, EU 프라이버시 벌금", "desc": "12억유로 과징금. 규제 리스크 부상.", "stock_ids": ["meta"], "impact": -0.25, "weight": 4, "category": "risk"},
+
+    {"id": "amazon_holiday_sales", "title": "아마존, 연말 시즌 매출 신기록", "desc": "블랙프라이데이 사상 최대 판매.", "stock_ids": ["amazon"], "impact": 0.35, "weight": 8, "category": "earnings"},
+    {"id": "amazon_aws_growth", "title": "AWS, 클라우드 점유율 35% 돌파", "desc": "AI 인프라 수요로 매출 가속.", "stock_ids": ["amazon"], "impact": 0.4, "weight": 7, "category": "earnings"},
+    {"id": "amazon_labor_cost", "title": "아마존, 노조 결성으로 인건비 급증", "desc": "물류센터 임금 인상. 마진 하락.", "stock_ids": ["amazon"], "impact": -0.25, "weight": 4, "category": "risk"},
+
+    {"id": "google_quantum", "title": "구글, 양자 컴퓨팅 돌파 발표", "desc": "실용적 양자 우위 달성. 기술주 강세.", "stock_ids": ["google"], "impact": 0.5, "weight": 6, "category": "tech"},
+    {"id": "google_antitrust", "title": "미국, 구글 반독점 소송 제기", "desc": "검색 독점 구조 분할 요구.", "stock_ids": ["google"], "impact": -0.4, "weight": 5, "category": "policy"},
+    {"id": "google_ai_gemini", "title": "구글, 제미니 AI 검색 도입", "desc": "AI 검색으로 광고 효율 급증.", "stock_ids": ["google"], "impact": 0.35, "weight": 7, "category": "product"},
+
+    {"id": "bitcoin_etf_approval", "title": "비트코인 현물 ETF 추가 승인", "desc": "기관 자금 대거 유입. 코인 시장 강세.", "stock_ids": ["bitcoin", "ethereum", "solana"], "impact": 0.9, "weight": 5, "category": "crypto"},
+    {"id": "bitcoin_halving", "title": "비트코인 반감기 도래", "desc": "채굴 보상 절반. 공급 축소로 급등.", "stock_ids": ["bitcoin"], "impact": 0.6, "weight": 6, "category": "crypto"},
+    {"id": "bitcoin_etf_outflow", "title": "비트코인 ETF 대규모 자금 유출", "desc": "기관 투자자 매도 전환. 하락 압력.", "stock_ids": ["bitcoin"], "impact": -0.5, "weight": 4, "category": "crypto"},
+    {"id": "bitcoin_nation_adopt", "title": "제3국, 비트코인 법정화비 채택", "desc": "국가 단위 도입으로 신뢰도 급상승.", "stock_ids": ["bitcoin"], "impact": 0.55, "weight": 4, "category": "crypto"},
+
+    {"id": "ethereum_upgrade", "title": "이더리움, 대규모 프로토콜 업그레이드", "desc": "수수료 90% 절감. 거래량 폭증.", "stock_ids": ["ethereum", "solana"], "impact": 0.5, "weight": 6, "category": "crypto"},
+    {"id": "ethereum_defi_boom", "title": "DeFi TVL 사상 최대", "desc": "이더리움 생태계 자산 급증.", "stock_ids": ["ethereum"], "impact": 0.4, "weight": 5, "category": "crypto"},
+    {"id": "ethereum_bridge_exploit", "title": "이더리움 브릿지 해킹", "desc": "크로스체인 프로토콜 취약점 exploited.", "stock_ids": ["ethereum"], "impact": -0.4, "weight": 3, "category": "crypto"},
+
+    {"id": "doge_celebrity_tweet", "title": "유력 인사, 도지코인 언급 트윗", "desc": "한 트윗에 도지코인 30% 급등.", "stock_ids": ["dogecoin"], "impact": 0.5, "weight": 7, "category": "crypto"},
+    {"id": "doge_payment_adopt", "title": "대형 결제업체, 도지코인 결제 지원", "desc": "실사용처 확대로 인지도 상승.", "stock_ids": ["dogecoin"], "impact": 0.35, "weight": 5, "category": "crypto"},
+    {"id": "doge_meme_crash", "title": "밈코인 열기 급랭", "desc": "개인 투자자 이탈. 밈코인 전반 하락.", "stock_ids": ["dogecoin"], "impact": -0.45, "weight": 4, "category": "crypto"},
+
+    {"id": "solana_outage", "title": "솔라나, 메인넷 대규모 장애", "desc": "네트워크 중단 반복. 신뢰도 하락.", "stock_ids": ["solana"], "impact": -0.5, "weight": 4, "category": "crypto"},
+    {"id": "solana_nft_boom", "title": "솔라나 NFT 거래량 폭증", "desc": "저수수료 생태계로 NFT 활동 집중.", "stock_ids": ["solana"], "impact": 0.4, "weight": 5, "category": "crypto"},
+    {"id": "solana_phone", "title": "솔라나, 암호화폐 전용폰 출시", "desc": "Saga 폰 완판. 웹3 접근성 확대.", "stock_ids": ["solana"], "impact": 0.35, "weight": 4, "category": "product"},
+
+    {"id": "fed_rate_hike", "title": "미국 연준, 금리 인상 시사", "desc": "인플레이션 우려로 전 시장 급락.", "stock_ids": ["apple", "tesla", "nvidia", "microsoft", "meta", "amazon", "google"], "impact": -0.7, "weight": 4, "category": "macro"},
+    {"id": "fed_rate_cut", "title": "미국 연준, 금리 인하 발표", "desc": "소프트랜딩 확정. 전 시장 일제히 상승.", "stock_ids": ["apple", "tesla", "nvidia", "microsoft", "meta", "amazon", "google"], "impact": 0.6, "weight": 5, "category": "macro"},
+    {"id": "korea_regulation", "title": "한국, 반도체 수출 규제 완화", "desc": "정부 지원 정책 발표.", "stock_ids": ["samsung", "skhynix"], "impact": 0.3, "weight": 9, "category": "policy"},
+    {"id": "korea_stimulus", "title": "한국 정부, 경기 부양책 발표", "desc": "추가경정예산 편성. 한국주 일제히 상승.", "stock_ids": ["samsung", "skhynix", "celltrion", "alteogen", "ecopro"], "impact": 0.25, "weight": 8, "category": "policy"},
+    {"id": "global_recession_fear", "title": "글로벌 경기침체 우려 고조", "desc": "주요국 경제지표 부진. 글로벌 동반 하락.", "stock_ids": ["apple", "tesla", "amazon", "samsung", "skhynix"], "impact": -0.5, "weight": 4, "category": "macro"},
+    {"id": "chip_export_control", "title": "미국, 반도체 장비 수출 통제 강화", "desc": "한국 반도체업체 중국 공장 타격 우려.", "stock_ids": ["samsung", "skhynix"], "impact": -0.4, "weight": 5, "category": "policy"},
+    {"id": "oil_price_surprise", "title": "국제 유가 급등", "desc": "OPEC+ 감산 연장. 인플레이션 압력.", "stock_ids": ["tesla", "amazon"], "impact": -0.2, "weight": 6, "category": "macro"},
+    {"id": "ai_boom_market", "title": "글로벌 AI 투자 붐", "desc": "AI 관련주 전반 폭등. 기술주 강세.", "stock_ids": ["nvidia", "microsoft", "google", "samsung", "skhynix"], "impact": 0.45, "weight": 8, "category": "macro"}
   ],
   "crypto_risks": [
-    {
-      "id": "exchange_hack",
-      "title": "대형 거래소 해킹 발생",
-      "desc": "고객 자산 일부 유출. 코인 시장 패닉.",
-      "impact": -0.6,
-      "loss_pct": 0.15,
-      "weight": 3
-    },
-    {
-      "id": "whale_dump",
-      "title": "고래 대량 매도 덤핑",
-      "desc": "거대 보유자가 대량 매도. 단기 급락.",
-      "impact": -0.4,
-      "loss_pct": 0,
-      "weight": 5
-    },
-    {
-      "id": "regulation_fud",
-      "title": "주요국 코인 규제 발표",
-      "desc": "규제 불확실성으로 시장 위축.",
-      "impact": -0.3,
-      "loss_pct": 0,
-      "weight": 4
-    },
-    {
-      "id": "stablecoin_depeg",
-      "title": "스테이블코인 달러스 연동 붕괴",
-      "desc": "스테이블코인 가치 하락. 코인 전반 하락.",
-      "impact": -0.5,
-      "loss_pct": 0.05,
-      "weight": 2
-    }
+    {"id": "exchange_hack", "title": "대형 거래소 해킹 발생", "desc": "고객 자산 일부 유출. 코인 시장 패닉.", "impact": -0.6, "loss_pct": 0.15, "weight": 3},
+    {"id": "whale_dump", "title": "고래 대량 매도 덤핑", "desc": "거대 보유자 대량 매도. 단기 급락.", "impact": -0.4, "loss_pct": 0, "weight": 5},
+    {"id": "regulation_fud", "title": "주요국 코인 규제 발표", "desc": "규제 불확실성으로 시장 위축.", "impact": -0.3, "loss_pct": 0, "weight": 4},
+    {"id": "stablecoin_depeg", "title": "스테이블코인 달러스 연동 붕괴", "desc": "스테이블코인 가치 하락. 코인 전반 하락.", "impact": -0.5, "loss_pct": 0.05, "weight": 2}
   ],
   "life_events": [
-    {
-      "id": "lottery",
-      "title": "복권 당첨!",
-      "desc": "길 가다 산 복권이 2등에 당첨.",
-      "cash_reward": 50000000,
-      "weight": 1
-    },
-    {
-      "id": "tax_refund",
-      "title": "연말정산 환급",
-      "desc": "예상보다 큰 세금 환급.",
-      "cash_reward": 3000000,
-      "weight": 8
-    },
-    {
-      "id": "medical_bill",
-      "title": "건강검진 이상 소견",
-      "desc": "치료비 지출. (주거 단계에 따라 할인)",
-      "cash_reward": -5000000,
-      "weight": 5
-    },
-    {
-      "id": "side_hustle",
-      "title": "부업 성공",
-      "desc": "야간 투자 유튜브가 의외의 히트.",
-      "cash_reward": 15000000,
-      "weight": 3
-    },
-    {
-      "id": "gift_from_parent",
-      "title": "부모님 용돈",
-      "desc": "부모님이 용돈을 쏘셨다.",
-      "cash_reward": 2000000,
-      "weight": 10
-    }
+    {"id": "lottery", "title": "복권 당첨!", "desc": "길 가다 산 복권이 2등에 당첨.", "cash_reward": 50000000, "weight": 1},
+    {"id": "tax_refund", "title": "연말정산 환급", "desc": "예상보다 큰 세금 환급.", "cash_reward": 3000000, "weight": 8},
+    {"id": "medical_bill", "title": "건강검진 이상 소견", "desc": "치료비 지출.", "cash_reward": -5000000, "weight": 5},
+    {"id": "side_hustle", "title": "부업 성공", "desc": "야간 투자 유튜브가 의외의 히트.", "cash_reward": 15000000, "weight": 3},
+    {"id": "gift_from_parent", "title": "부모님 용돈", "desc": "부모님이 용돈을 쏘셨다.", "cash_reward": 2000000, "weight": 10},
+    {"id": "office_bonus", "title": "회사 성과급", "desc": "예상치 못한 성과급 지급.", "cash_reward": 8000000, "weight": 6},
+    {"id": "parking_ticket", "title": "주정차 위반 딱지", "desc": "황금연휴 주차딱지.", "cash_reward": -500000, "weight": 7},
+    {"id": "stock_dividend_surprise", "title": "예상 밖의 배당금", "desc": "보유 종목 특별배당 발표.", "cash_reward": 5000000, "weight": 5}
   ]
 }

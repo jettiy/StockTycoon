@@ -12,8 +12,13 @@ var _life_event_pool: Array = []
 var _active_events: Array = []  # 현재 활성 이벤트
 var _rng := RandomNumberGenerator.new()
 
+# 뉴스 쿨다운: event_id -> 마지막 발생 day
+var _news_cooldown: Dictionary = {}
+const NEWS_COOLDOWN_DAYS := 5  # 같은 뉴스 5일간 재발생 방지
+
 # 매일 이벤트 발생 확률
-const NEWS_CHANCE_PER_DAY := 0.4
+const NEWS_CHANCE_PER_DAY := 0.65
+const NEWS_MAX_PER_DAY := 3
 const CRYPTO_RISK_CHANCE_PER_DAY := 0.15
 const LIFE_EVENT_CHANCE_PER_DAY := 0.25
 
@@ -24,7 +29,7 @@ func _ready() -> void:
 
 
 func _load_data() -> void:
-	var data = _load_json("res://data/events.json")
+	var data = DataUtil.load_json("res://data/events.json")
 	if data == null:
 		push_error("EventManager: events.json 로드 실패")
 		return
@@ -37,10 +42,19 @@ func _load_data() -> void:
 func roll_daily_events() -> Array:
 	var triggered: Array = []
 
-	# 뉴스 이벤트
-	if _rng.randf() < NEWS_CHANCE_PER_DAY:
-		var event := _pick_weighted(_news_pool)
-		if not event.is_empty():
+	# 뉴스 이벤트 — 하루에 최대 NEWS_MAX_PER_DAY개까지 발생 가능
+	var news_chance := NEWS_CHANCE_PER_DAY
+	# 결혼 버프: 뉴스 선입수 확률 증가 (서하린)
+	if NPCManager.has_marriage_buff("early_news"):
+		news_chance = minf(news_chance * (1.0 + NPCManager.get_marriage_buff("early_news")), 1.0)
+	if _rng.randf() < news_chance:
+		var news_count: int = _rng.randi() % NEWS_MAX_PER_DAY + 1
+		var used_ids: Dictionary = {}
+		for _i in news_count:
+			var event := _pick_news_with_cooldown()
+			if event.is_empty() or used_ids.has(event.get("id", "")):
+				continue
+			used_ids[event.get("id", "")] = true
 			_apply_news(event)
 			triggered.append(event)
 			event_triggered.emit(event)
@@ -69,6 +83,9 @@ func _apply_news(event: Dictionary) -> void:
 	var impact: float = event.get("impact", 0.0)
 	for stock_id in event.get("stock_ids", []):
 		MarketSim.apply_event(stock_id, impact)
+
+	# 쿨다운 기록
+	_news_cooldown[event.get("id", "")] = GameManager.player["day"]
 
 	_active_events.append({
 		"id": event.get("id", ""),
@@ -120,10 +137,10 @@ func _apply_life_event(event: Dictionary) -> void:
 		var house: Dictionary = GameManager.get_current_house()
 		var house_index: int = GameManager.get_housing_list().find(house)
 		# 고급 주거일수록 의료비 할인
-		if house_index >= 3:
-			reward *= 0.5
-		elif house_index >= 5:
+		if house_index >= 5:
 			reward *= 0.2
+		elif house_index >= 3:
+			reward *= 0.5
 
 	GameManager.add_cash(reward)
 
@@ -146,6 +163,23 @@ func clear_old_events(days_to_keep: int = 10) -> void:
 	_active_events = _active_events.filter(
 		func(e): return current_day - e.get("day", 0) <= days_to_keep
 	)
+
+
+## 쿨다운이 적용된 뉴스 선택
+func _pick_news_with_cooldown() -> Dictionary:
+	if _news_pool.is_empty():
+		return {}
+	var current_day: int = GameManager.player["day"]
+	# 쿨다운이 지난 뉴스만 필터링
+	var available: Array = []
+	for item in _news_pool:
+		var eid: String = item.get("id", "")
+		var last_day: int = _news_cooldown.get(eid, -999)
+		if current_day - last_day >= NEWS_COOLDOWN_DAYS:
+			available.append(item)
+	if available.is_empty():
+		available = _news_pool
+	return _pick_weighted(available)
 
 
 # ─── 내부 유틸 ──────────────────────────────────
@@ -172,14 +206,3 @@ func _has_crypto_holdings() -> bool:
 		if stock.get("category") == "coin":
 			return true
 	return false
-
-
-func _load_json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		return null
-	var text := file.get_as_text()
-	file.close()
-	return JSON.parse_string(text)

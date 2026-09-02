@@ -1,0 +1,28 @@
+{
+  "project": { "id": "stocktycoon", "name": "StockTycoon" },
+  "categories": ["게임로직", "매니저/아키텍처", "콘텐츠", "UI/UX"],
+  "starter_todos": [
+    {
+      "title": "IPO 매니저 로직 검토 (13개 autoload 정합성)",
+      "priority": "medium",
+      "category": "매니저/아키텍처",
+      "note": "autoload 매니저 간 의존/초기화 순서 점검"
+    },
+    {
+      "title": "주가 시뮬레이션 밸런스 튜닝",
+      "priority": "medium",
+      "category": "게임로직"
+    },
+    {
+      "title": "GDD 기반 미구현 기능 정리",
+      "priority": "low",
+      "category": "콘텐츠",
+      "note": "GDD.md 대비 누락 기능 목록화"
+    },
+    {
+      "title": "Godot 4.7 호환성 점검",
+      "priority": "low",
+      "category": "매니저/아키텍처"
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 
-; StockTycoon (주식잡스) — Godot 4.7 project
+; StockTycoon (스톡 타이쿤) — Godot 4.7 project
 ; 증권가에 취직한 청년이 주식/코인으로 돈을 벌고, 집·차·결혼까지 이루는 방치형 게임
 
 config_version=5
 
 [application]
 
-config/name="StockTycoon"
+config/name="스톡 타이쿤"
 config/description="증권가에 취직한 청년이 주식/코인으로 돈을 벌고, 집·차·결혼까지 이루는 방치형 게임"
 run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
@@ -26,12 +26,13 @@ StoryManager="*res://scripts/autoload/StoryManager.gd"
 QuestManager="*res://scripts/autoload/QuestManager.gd"
 BusinessManager="*res://scripts/autoload/BusinessManager.gd"
 GameClockManager="*res://scripts/autoload/GameClockManager.gd"
+IPOManager="*res://scripts/autoload/IPOManager.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/size/mode=2
+window/size/mode=0
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=0

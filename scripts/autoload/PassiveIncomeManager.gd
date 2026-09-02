@@ -29,7 +29,7 @@ func _ready() -> void:
 
 
 func _load_config() -> void:
-	var data = _load_json("res://data/balance.json")
+	var data = DataUtil.load_json("res://data/balance.json")
 	if data and data.has("passive_income"):
 		_config = data["passive_income"]
 		_tick_interval = _config.get("tick_income_interval", 5.0)
@@ -135,7 +135,11 @@ func _calc_tick_interest() -> float:
 	if cash <= 0:
 		return 0.0
 	# 일일 이율을 틱으로 분할 (게임 가속 반영)
-	var interest = cash * _interest_rate / _game_accel
+	var rate := _interest_rate
+	# 결혼 버프: 예금 이자율 증가 (백예린)
+	if NPCManager.has_marriage_buff("interest_boost"):
+		rate *= (1.0 + NPCManager.get_marriage_buff("interest_boost"))
+	var interest = cash * rate / _game_accel
 	interest = _apply_cap(interest, _interest_cap_pct)
 	return interest
 
@@ -173,7 +177,11 @@ func pay_daily_rental_interest() -> Dictionary:
 	# 현금 이자
 	var cash := GameManager.get_cash()
 	if cash > 0:
-		var daily_interest: float = cash * _interest_rate
+		var interest_rate := _interest_rate
+		# 결혼 버프: 예금 이자율 증가 (백예린)
+		if NPCManager.has_marriage_buff("interest_boost"):
+			interest_rate *= (1.0 + NPCManager.get_marriage_buff("interest_boost"))
+		var daily_interest: float = cash * interest_rate
 		if daily_interest > 0:
 			# 캡 적용
 			var net_worth := GameManager.get_net_worth()
@@ -223,6 +231,12 @@ func pay_daily_dividends() -> float:
 
 # ─── 통계 조회 ──────────────────────────────────
 
+func reset_accumulated() -> void:
+	_total_dividends = 0.0
+	_total_rental = 0.0
+	_total_interest = 0.0
+	_last_income = 0.0
+
 func get_total_dividends() -> float:
 	return _total_dividends
 
@@ -259,12 +273,4 @@ func get_projected_breakdown() -> Dictionary:
 		"business": BusinessManager.calc_tick_revenue() / _tick_interval
 	}
 
-func _load_json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		return null
-	var text := file.get_as_text()
-	file.close()
-	return JSON.parse_string(text)
+

@@ -86,6 +86,22 @@ static func typewriter(label: Label, full_text: String, char_delay: float = 0.02
 		await label.get_tree().create_timer(char_delay).timeout
 
 
+## 노드가 왼쪽에서 미끄러지며 나타남
+static func slide_in_from_left(node: Control, distance: float = 60.0, duration: float = 0.25) -> void:
+	var orig_x := node.position.x
+	node.position.x = orig_x - distance
+	node.modulate.a = 0.0
+	var tw := node.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(node, "position:x", orig_x, duration).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tw.tween_property(node, "modulate:a", 1.0, duration)
+
+## 카드 페이드인 (HBoxContainer 등 레이아웃 컨테이너 내부용 — position 트윈 없이 modulate만)
+static func card_fade_in(node: Control, duration: float = 0.2) -> void:
+	node.modulate.a = 0.0
+	var tw := node.create_tween()
+	tw.tween_property(node, "modulate:a", 1.0, duration).set_ease(Tween.EASE_OUT)
+
 ## 진동 (에러/경고)
 static func shake(node: Control, intensity: float = 5.0, duration: float = 0.3) -> void:
 	var orig := node.position
@@ -96,3 +112,18 @@ static func shake(node: Control, intensity: float = 5.0, duration: float = 0.3) 
 		var decay := 1.0 - float(i) / float(steps)
 		tw.tween_property(node, "position:x", orig.x + dir * intensity * decay, 0.05)
 	tw.tween_property(node, "position", orig, 0.05)
+
+## 주사위 스케일 bounce (굴림 중 살짝 커졌다 작아지는 반복)
+static func dice_bounce(node: Control, scale_to: float = 1.08, duration: float = 0.08) -> void:
+	var tw := node.create_tween()
+	tw.tween_property(node, "scale", Vector2(scale_to, scale_to), duration * 0.5)
+	tw.tween_property(node, "scale", Vector2.ONE, duration * 0.5)
+
+## 주사위 미세 흔들림 (굴림 중)
+static func dice_shake(node: Control) -> void:
+	var orig := node.position
+	var tw := node.create_tween()
+	var offsets := [Vector2(2, -1), Vector2(-2, 1), Vector2(1, 2), Vector2(-1, -2)]
+	for off: Vector2 in offsets:
+		tw.tween_property(node, "position", orig + off, 0.03)
+	tw.tween_property(node, "position", orig, 0.03)

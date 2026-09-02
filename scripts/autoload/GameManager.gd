@@ -38,6 +38,9 @@ const DEFAULT_PLAYER := {
 
 var _balance: Dictionary = {}
 
+# 순자산 히스토리: [{day, value}, ...]
+var _net_worth_history: Array = []
+
 
 func _ready() -> void:
 	_load_balance()
@@ -146,6 +149,13 @@ func sell_stock(stock_id: String, quantity: int) -> Dictionary:
 	player["cash"] += net
 	player["trade_count"] += 1
 
+	# 초보 보호: 첫 N거래 수익 보장
+	var guaranteed_limit: int = int(_balance.get("difficulty", {}).get("first_trades_guaranteed_profit", 3))
+	if player["first_trades_used"] < guaranteed_limit and profit < 0:
+		player["cash"] += absf(profit)
+		player["first_trades_used"] += 1
+		profit = 0.0  # 실제 수익을 0으로 보정
+
 	cash_changed.emit(player["cash"])
 	holdings_changed.emit()
 	_emit_net_worth()
@@ -165,7 +175,17 @@ func _calc_fee(amount: float, is_buy: bool) -> float:
 		var discount: float = _balance.get("player", {}).get("trade_fee_discount_newbie", 0.5)
 		rate *= (1.0 - discount)
 
-	return amount * rate
+	# 결혼 버프: 수수료 증가 (서하린/백예린 debuff)
+	if NPCManager.has_marriage_buff("fee_increase"):
+		rate *= (1.0 + NPCManager.get_marriage_buff("fee_increase"))
+
+	var fee := amount * rate
+
+	# 결혼 버프: 세금 절약 (채인영 — 매도 시에만)
+	if not is_buy and NPCManager.has_marriage_buff("tax_cut"):
+		fee *= (1.0 - NPCManager.get_marriage_buff("tax_cut"))
+
+	return fee
 
 
 # ─── 포트폴리오 ──────────────────────────────────
@@ -189,6 +209,35 @@ func get_net_worth() -> float:
 
 func _emit_net_worth() -> void:
 	net_worth_changed.emit(get_net_worth())
+
+
+## 순자산 히스토리 기록 — 중복 day 방지
+func record_net_worth(day: int) -> void:
+	# 같은 day가 이미 있으면 갱신
+	if _net_worth_history.size() > 0:
+		var last: Dictionary = _net_worth_history[_net_worth_history.size() - 1]
+		if int(last.get("day", 0)) == day:
+			last["value"] = get_net_worth()
+			return
+	_net_worth_history.append({"day": day, "value": get_net_worth()})
+	# 최대 365일 유지
+	if _net_worth_history.size() > 365:
+		_net_worth_history.pop_front()
+
+
+## 순자산 히스토리 반환
+func get_net_worth_history() -> Array:
+	return _net_worth_history
+
+
+## 순자산 히스토리 직렬화
+func serialize_net_worth_history() -> Array:
+	return _net_worth_history.duplicate(true)
+
+
+## 순자산 히스토리 역직렬화
+func deserialize_net_worth_history(data: Array) -> void:
+	_net_worth_history = data.duplicate(true)
 
 
 # ─── 경과 / 직급 ────────────────────────────────
@@ -219,17 +268,12 @@ func advance_day() -> Dictionary:
 	var regen := get_energy_regen_rate()
 	recover_energy(regen)
 
-	# 정기 배당금 지급
-	var dividends := PassiveIncomeManager.pay_daily_dividends()
-	if dividends > 0:
-		result["dividends"] = dividends
-
-	# 일일 임대 수익 + 이자 정산 (방치형 핵심)
-	var passive := PassiveIncomeManager.pay_daily_rental_interest()
-	if passive.has("rental") and passive["rental"] > 0:
-		result["rental"] = passive["rental"]
-	if passive.has("interest") and passive["interest"] > 0:
-		result["interest"] = passive["interest"]
+	# 일일 정산: 실시간 틱 수익만 사용 (이중 지급 방지)
+	# pay_daily_dividends/pay_daily_rental_interest 호출 제거
+	# 틱 수익 캡 도달 알림만 표시
+	var daily_summary := PassiveIncomeManager.get_projected_per_day()
+	if daily_summary > 0:
+		result["daily_passive_info"] = daily_summary
 
 	# 사업 일일 수익 정산
 	var biz_rev := BusinessManager.pay_daily_revenue()
@@ -241,11 +285,14 @@ func advance_day() -> Dictionary:
 	if biz_events.size() > 0:
 		result["business_events"] = biz_events
 
-	# 파산 방지 지원금
+	# 파산 방지 지원금 (7일 쿨다운)
 	var bailout_thresh: float = _balance.get("difficulty", {}).get("bailout_threshold", 500000)
 	var bailout_amt: float = _balance.get("difficulty", {}).get("bailout_amount", 2000000)
-	if get_net_worth() < bailout_thresh:
+	var current_day: int = int(player["day"])
+	var last_bailout_day: int = int(player.get("last_bailout_day", 0))
+	if get_net_worth() < bailout_thresh and (current_day - last_bailout_day) >= 7:
 		player["cash"] += bailout_amt
+		player["last_bailout_day"] = current_day
 		result["bailout"] = bailout_amt
 		cash_changed.emit(player["cash"])
 
@@ -422,6 +469,98 @@ func get_energy_regen_rate() -> int:
 
 func _fail(reason: String) -> Dictionary:
 	return {"success": false, "reason": reason}
+
+
+# ─── 자산 매각 시스템 ────────────────────────────
+
+## 보유 주식을 시장가로 매각 (매각가 = 시장가 * 0.8)
+func liquidate_stock(stock_id: String, qty: int = -1) -> Dictionary:
+	if not player["holdings"].has(stock_id):
+		return _fail("보유하지 않은 종목")
+	var holding: Dictionary = player["holdings"][stock_id]
+	var held: int = int(holding.get("quantity", 0))
+	if held <= 0:
+		return _fail("보유 수량 없음")
+	if qty < 0 or qty > held:
+		qty = held
+	var stock := MarketSim.get_stock(stock_id)
+	if stock.is_empty():
+		return _fail("종목 정보 없음")
+	var sell_price: float = float(stock["price"]) * 0.8  # 매각가 80%
+	var proceeds: float = sell_price * qty
+	player["cash"] += proceeds
+	holding["quantity"] -= qty
+	if holding["quantity"] <= 0:
+		player["holdings"].erase(stock_id)
+	else:
+		player["holdings"][stock_id] = holding
+	cash_changed.emit(player["cash"])
+	holdings_changed.emit()
+	_emit_net_worth()
+	return {"success": true, "proceeds": proceeds, "qty_sold": qty}
+
+
+## 차량 매각 (구매가의 60% 환불, 기본 차량으로 다운그레이드)
+func liquidate_vehicle() -> Dictionary:
+	var current := get_current_vehicle()
+	if current.is_empty() or current.get("id", "") == "bicycle":
+		return _fail("매각 가능한 차량 없음")
+	var refund: float = float(current.get("price", 0)) * 0.6
+	player["cash"] += refund
+	player["vehicle"] = "bicycle"
+	cash_changed.emit(player["cash"])
+	_emit_net_worth()
+	return {"success": true, "proceeds": refund, "new_vehicle": "bicycle"}
+
+
+## 주거 다운그레이드 (현재 주거의 70% 환불, 한 단계 아래로)
+func liquidate_house() -> Dictionary:
+	var current := get_current_house()
+	if current.is_empty() or current.get("id", "") == "gosiwon":
+		return _fail("매각 가능한 주거 없음")
+	var house_list := get_housing_list()
+	var current_idx := house_list.find(current)
+	if current_idx <= 0:
+		return _fail("최하위 주거")
+	var new_house: Dictionary = house_list[current_idx - 1]
+	var refund: float = float(current.get("price", 0)) * 0.7
+	player["cash"] += refund
+	player["house"] = new_house["id"]
+	cash_changed.emit(player["cash"])
+	_emit_net_worth()
+	return {"success": true, "proceeds": refund, "new_house": new_house["id"]}
+
+
+## 현금 부족 시 강제 매각 — 우선순위: 주식 > 차량 > 주거
+func force_liquidate_to_positive() -> Dictionary:
+	var log_msgs: Array = []
+	# 1. 보유 주식 전량 매각
+	for stock_id in player["holdings"].keys().duplicate():
+		var r := liquidate_stock(stock_id)
+		if r.get("success"):
+			log_msgs.append("주식 %s 매각: +%s" % [stock_id, _fmt_liq(r["proceeds"])])
+		if player["cash"] >= 0:
+			break
+	# 2. 차량 매각
+	if player["cash"] < 0:
+		var rv := liquidate_vehicle()
+		if rv.get("success"):
+			log_msgs.append("차량 매각: +%s" % _fmt_liq(rv["proceeds"]))
+	# 3. 주거 다운그레이드
+	if player["cash"] < 0:
+		var rh := liquidate_house()
+		if rh.get("success"):
+			log_msgs.append("주거 다운그레이드: +%s" % _fmt_liq(rh["proceeds"]))
+	return {"success": true, "log": log_msgs, "final_cash": player["cash"]}
+
+
+func _fmt_liq(v: float) -> String:
+	var ab := absf(v)
+	if ab >= 100_000_000:
+		return "%.1f억" % (v / 100_000_000)
+	elif ab >= 10_000:
+		return "%.0f만" % (v / 10_000)
+	return "%.0f" % v
 
 
 func _format_won(amount: float) -> String:

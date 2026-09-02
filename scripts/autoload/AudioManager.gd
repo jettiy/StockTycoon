@@ -1,204 +1,138 @@
 extends Node
-## AudioManager — 절차적 효과음 생성 (오디오 파일 없이 코드로 사운드 생성)
+## AudioManager — BGM 재생 관리 + SFX 스텁
 
-var _master_volume: float = 0.6
-var _sfx_enabled: bool = true
-
-var _audio_players: Array[AudioStreamPlayer] = []
-const MAX_PLAYERS := 8
-var _player_index := 0
+var _bgm_player: AudioStreamPlayer
+var _bgm_on: bool = true
+const BGM_VOLUME: float = 0.5
+var _tex_on: ImageTexture
+var _tex_off: ImageTexture
 
 
 func _ready() -> void:
-	for i in MAX_PLAYERS:
-		var p := AudioStreamPlayer.new()
-		p.volume_db = linear_to_db(_master_volume)
-		add_child(p)
-		_audio_players.append(p)
+	_tex_on = _load_texture("res://assets/images/icon_music_on.png")
+	_tex_off = _load_texture("res://assets/images/icon_music_off.png")
+	_bgm_player = AudioStreamPlayer.new()
+	_bgm_player.volume_db = linear_to_db(BGM_VOLUME)
+	add_child(_bgm_player)
 
 
-func _get_player() -> AudioStreamPlayer:
-	var p := _audio_players[_player_index]
-	_player_index = (_player_index + 1) % MAX_PLAYERS
-	return p
-
-
-## 짧은 효과음 생성 — freq(주파수), duration(초), type(파형)
-func _make_blip(freq: float, duration: float, type: int = 0) -> AudioStreamWAV:
-	var sample_rate := 22050
-	var samples := int(sample_rate * duration)
-	var data := PackedByteArray()
-	data.resize(samples * 2)
-
-	for i in samples:
-		var t := float(i) / sample_rate
-		var sample: float = 0.0
-
-		match type:
-			0:  # sine
-				sample = sin(t * freq * TAU)
-			1:  # square
-				sample = 1.0 if sin(t * freq * TAU) > 0 else -1.0
-			2:  # sawtooth
-				sample = fmod(t * freq, 1.0) * 2.0 - 1.0
-			3:  # noise burst
-				sample = randf_range(-1.0, 1.0)
-
-		# envelope (attack-decay)
-		var env: float = 1.0
-		var attack := 0.01
-		var release_start := duration * 0.6
-		if t < attack:
-			env = t / attack
-		elif t > release_start:
-			env = maxf(0.0, 1.0 - (t - release_start) / (duration - release_start))
-
-		sample *= env * 0.3
-
-		var s16 := int(clampf(sample, -1.0, 1.0) * 32767)
-		data.encode_s16(i * 2, s16)
-
-	var wav := AudioStreamWAV.new()
-	wav.format = AudioStreamWAV.FORMAT_16_BITS
-	wav.mix_rate = sample_rate
-	wav.stereo = false
-	wav.data = data
-	return wav
-
-
-func _play(stream: AudioStreamWAV, volume_offset: float = 0.0) -> void:
-	if not _sfx_enabled:
+## BGM 재생 (무한 루프) — 이미 재생 중이면 무시
+func play_bgm() -> void:
+	if not _bgm_on or not _bgm_player:
 		return
-	var p := _get_player()
-	p.stream = stream
-	p.volume_db = linear_to_db(_master_volume) + volume_offset
-	p.play()
+	if _bgm_player.playing:
+		return
+	var stream := _load_wav("res://bgm/bgm_group_bubble.wav")
+	if not stream:
+		return
+	stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	_bgm_player.stream = stream
+	_bgm_player.play()
 
 
-# ─── 게임 효과음 ──────────────────────────────
-
-func play_buy() -> void:
-	# 상승음 (C5 -> E5 -> G5)
-	var s := _make_blip(523.0, 0.08, 0)
-	_play(s, 2.0)
-	get_tree().create_timer(0.06).timeout.connect(func(): _play(_make_blip(659.0, 0.08, 0), 2.0))
-	get_tree().create_timer(0.12).timeout.connect(func(): _play(_make_blip(784.0, 0.12, 0), 2.0))
-
-
-func play_sell() -> void:
-	# 하락음 (G5 -> E5 -> C5)
-	var s := _make_blip(784.0, 0.08, 0)
-	_play(s, 2.0)
-	get_tree().create_timer(0.06).timeout.connect(func(): _play(_make_blip(659.0, 0.08, 0), 2.0))
-	get_tree().create_timer(0.12).timeout.connect(func(): _play(_make_blip(523.0, 0.12, 0), 2.0))
-
-
-func play_error() -> void:
-	# 에러음 (낮은 buzzing)
-	var s := _make_blip(150.0, 0.15, 1)
-	_play(s, -2.0)
-
-
-func play_day_advance() -> void:
-	# 하루 경과 (부드러운 차임벨)
-	var s := _make_blip(440.0, 0.15, 0)
-	_play(s, 0.0)
-	get_tree().create_timer(0.08).timeout.connect(func(): _play(_make_blip(660.0, 0.2, 0), 0.0))
-
-
-func play_event_news() -> void:
-	# 뉴스 이벤트 (트리플 알림)
-	for i in 3:
-		var delay := i * 0.1
-		get_tree().create_timer(delay).timeout.connect(
-			func(): _play(_make_blip(880.0, 0.06, 0), 3.0)
-		)
-
-
-func play_event_bad() -> void:
-	# 나쁜 소식 (저음 톤)
-	var s := _make_blip(200.0, 0.3, 2)
-	_play(s, -1.0)
-
-
-func play_rank_up() -> void:
-	# 승진 (팡파르 — 상승 아르페지오)
-	var notes := [523.0, 659.0, 784.0, 1047.0]
-	for i in notes.size():
-		var delay := i * 0.08
-		get_tree().create_timer(delay).timeout.connect(
-			func(n: float = notes[i]): _play(_make_blip(n, 0.15, 0), 4.0)
-		)
+## WAV 파일 수동 파싱 → AudioStreamWAV (에디터 import 불필요)
+func _load_wav(res_path: String) -> AudioStreamWAV:
+	var fs_path := ProjectSettings.globalize_path(res_path)
+	var file := FileAccess.open(fs_path, FileAccess.READ)
+	if not file:
+		return null
+	# RIFF 헤더 스킵
+	file.get_32()  # "RIFF"
+	file.get_32()  # file size
+	file.get_32()  # "WAVE"
+	# fmt chunk 찾기
+	var channels: int = 1
+	var sample_rate: int = 44100
+	var fmt_found := false
+	while file.get_position() < file.get_length() and not fmt_found:
+		var chunk_id := file.get_32()
+		var chunk_size := file.get_32()
+		if chunk_id == 0x20746D66:  # "fmt "
+			file.get_16()  # audio format (PCM=1)
+			channels = file.get_16()
+			sample_rate = file.get_32()
+			file.get_32()  # byte rate
+			file.get_16()  # block align
+			file.get_16()  # bits per sample
+			fmt_found = true
+		else:
+			file.seek(file.get_position() + chunk_size)
+	if not fmt_found:
+		return null
+	# data chunk 찾기
+	var data: PackedByteArray = []
+	while file.get_position() < file.get_length():
+		var chunk_id := file.get_32()
+		var chunk_size := file.get_32()
+		if chunk_id == 0x61746164:  # "data"
+			data = file.get_buffer(chunk_size)
+			break
+		else:
+			file.seek(file.get_position() + chunk_size)
+	if data.is_empty():
+		return null
+	# AudioStreamWAV 조립 (기존 SFX와 동일 방식)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.stereo = channels >= 2
+	stream.data = data
+	return stream
 
 
-func play_auto_trade() -> void:
-	# 자동매매 실행 (전자음)
-	var s := _make_blip(1200.0, 0.04, 0)
-	_play(s, 1.0)
-	get_tree().create_timer(0.04).timeout.connect(func(): _play(_make_blip(800.0, 0.04, 0), 1.0))
+## BGM 정지
+func stop_bgm() -> void:
+	if _bgm_player:
+		_bgm_player.stop()
 
 
-func play_marriage() -> void:
-	# 결혼 (로맨틱 차임)
-	var notes := [659.0, 784.0, 1047.0, 784.0, 1047.0]
-	for i in notes.size():
-		var delay := i * 0.12
-		get_tree().create_timer(delay).timeout.connect(
-			func(n: float = notes[i]): _play(_make_blip(n, 0.2, 0), 3.0)
-		)
+## BGM 토글 (재생 ↔ 정지). 현재 상태 반환.
+func toggle_bgm() -> bool:
+	_bgm_on = not _bgm_on
+	if _bgm_on:
+		play_bgm()
+	else:
+		stop_bgm()
+	return _bgm_on
 
 
-func play_button_click() -> void:
-	var s := _make_blip(800.0, 0.03, 0)
-	_play(s, -3.0)
+## 현재 BGM 상태 반환
+func is_bgm_on() -> bool:
+	return _bgm_on
 
 
-## 퀘스트 완료 — 상승 멜로디
-func play_quest_complete() -> void:
-	var s1 := _make_blip(660.0, 0.08, 0)
-	_play(s1, 0.0)
-	var s2 := _make_blip(880.0, 0.08, 0)
-	get_tree().create_timer(0.08).timeout.connect(func(): _play(s2, 0.0))
-	var s3 := _make_blip(1100.0, 0.12, 0)
-	get_tree().create_timer(0.16).timeout.connect(func(): _play(s3, 0.0))
+## 현재 아이콘 텍스처 반환 (토글 버튼용)
+func get_icon_on() -> ImageTexture:
+	return _tex_on
+
+func get_icon_off() -> ImageTexture:
+	return _tex_off
 
 
-## 업적 달성 — 골드 멜로디
-func play_achievement_unlock() -> void:
-	var s1 := _make_blip(880.0, 0.06, 1)
-	_play(s1, 0.0)
-	var s2 := _make_blip(1320.0, 0.10, 1)
-	get_tree().create_timer(0.06).timeout.connect(func(): _play(s2, 0.0))
+## 텍스처 로드 헬퍼
+func _load_texture(res_path: String) -> ImageTexture:
+	var full_path := ProjectSettings.globalize_path(res_path)
+	if not FileAccess.file_exists(full_path):
+		return null
+	var img := Image.load_from_file(full_path)
+	if img:
+		return ImageTexture.create_from_image(img)
+	return null
 
 
-## 스토리 해금 — 깊은음
-func play_story_unlock() -> void:
-	var s := _make_blip(330.0, 0.25, 2)
-	_play(s, 2.0)
-
-
-## 사업 이벤트 (호황)
-func play_business_good() -> void:
-	var s := _make_blip(770.0, 0.10, 0)
-	_play(s, 0.0)
-
-
-## 사업 이벤트 (불황)
-func play_business_bad() -> void:
-	var s := _make_blip(300.0, 0.15, 2)
-	_play(s, 0.0)
-
-
-func set_volume(vol: float) -> void:
-	_master_volume = clampf(vol, 0.0, 1.0)
-	for p in _audio_players:
-		p.volume_db = linear_to_db(_master_volume)
-
-
-func toggle_sfx() -> bool:
-	_sfx_enabled = not _sfx_enabled
-	return _sfx_enabled
-
-
-func is_sfx_enabled() -> bool:
-	return _sfx_enabled
+# ─── SFX 스텁 (미사용 — 기존 호출 호환성 유지) ──────────
+func play_buy() -> void: pass
+func play_sell() -> void: pass
+func play_error() -> void: pass
+func play_day_advance() -> void: pass
+func play_event_news() -> void: pass
+func play_event_bad() -> void: pass
+func play_rank_up() -> void: pass
+func play_auto_trade() -> void: pass
+func play_marriage() -> void: pass
+func play_button_click() -> void: pass
+func play_quest_complete() -> void: pass
+func play_achievement_unlock() -> void: pass
+func play_story_unlock() -> void: pass
+func play_business_good() -> void: pass
+func play_business_bad() -> void: pass

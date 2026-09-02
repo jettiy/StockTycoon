@@ -18,7 +18,7 @@ func _ready() -> void:
 
 
 func _load_data() -> void:
-	var data = _load_json("res://data/story.json")
+	var data = DataUtil.load_json("res://data/story.json")
 	if data and data.has("chapters"):
 		_chapters = data["chapters"]
 
@@ -159,13 +159,3 @@ func serialize() -> Dictionary:
 func deserialize(data: Dictionary) -> void:
 	_completed_chapters = data.get("completed_chapters", {}).duplicate()
 
-
-func _load_json(path: String) -> Variant:
-	if not FileAccess.file_exists(path):
-		return null
-	var file := FileAccess.open(path, FileAccess.READ)
-	if not file:
-		return null
-	var text := file.get_as_text()
-	file.close()
-	return JSON.parse_string(text)

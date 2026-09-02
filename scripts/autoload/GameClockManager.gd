@@ -141,15 +141,39 @@ func _enter_phase(new_phase: int) -> void:
 func _do_advance_day() -> void:
 	_advancing = true
 
+	# OHLC 기록을 위해 day 증가 전에 전날 day 저장
+	var yesterday_day: int = GameManager.player.get("day", 1)
 	var r := GameManager.advance_day()
+	# 이벤트를 먼저 발생시킨 후, 다음 날 진행 시 오래된 이벤트 정리
 	var events := EventManager.roll_daily_events()
 	r["events"] = events
-	EventManager.clear_old_events()
 
-	# 다음날 시가 = 전날 종가
-	MarketSim.advance_day()
+	# 다음날 시가 = 전날 종가 (전날 day 값 전달)
+	MarketSim.advance_day(yesterday_day)
+
+	# 일간 종가 기록 (day_advanced 시그널 이전에 기록)
+	var current_day: int = GameManager.player.get("day", 1)
+	MarketSim.record_daily_close(current_day)
+
+	# 마이너스 현금 확인 — 자동 매각
+	if GameManager.player["cash"] < 0:
+		var liq := GameManager.force_liquidate_to_positive()
+		if liq.get("success") and liq["log"].size() > 0:
+			r["liquidation"] = liq["log"]
+
+	# IPO 이벤트 처리
+	IPOManager.on_day_advanced(GameManager.player.get("day", 1))
+
+	# 주간 사업 이벤트 갱신 (매 7일)
+	BusinessManager.roll_weekly_events(GameManager.player.get("day", 1))
+
+	# 순자산 히스토리 기록
+	GameManager.record_net_worth(GameManager.player.get("day", 1))
 
 	day_advanced.emit(GameManager.player.get("day", 1), r)
+
+	# day_advanced 이벤트 처리 완료 후 오래된 이벤트 정리
+	EventManager.clear_old_events()
 	_advancing = false
 
 
@@ -221,6 +245,12 @@ func start_new_game() -> void:
 	speed_multiplier = 1.0
 	pre_market_news_shown = false
 	time_changed.emit(in_game_hour, in_game_minute, current_phase)
+
+
+## 게임 시작 후 첫 브리핑 트리거 (MainGame._ready에서 호출)
+func trigger_first_briefing() -> void:
+	pre_market_news_shown = false
+	pre_market_started.emit()
 
 
 ## 저장/로드
